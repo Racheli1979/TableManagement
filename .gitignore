@@ -1,0 +1,49 @@
+# ======================
+# .NET / C# stuff
+# ======================
+bin/
+obj/
+*.user
+*.rsuser
+*.suo
+*.userosscache
+*.sln.docstates
+.vs/
+TestResults/
+
+# Rider / VSCode / Visual Studio Code
+.vscode/
+.idea/
+
+# ======================
+# Angular / Node stuff
+# ======================
+node_modules/
+dist/
+tmp/
+out-tsc/
+.angular/
+
+# environment files (optional, sensitive)
+src/environments/*.ts
+
+# logs
+*.log
+
+# package lock files
+package-lock.json
+yarn.lock
+pnpm-lock.yaml
+
+# ======================
+# OS / System files
+# ======================
+.DS_Store
+Thumbs.db
+
+# ======================
+# Other temporary files
+# ======================
+*.swp
+*.bak
+*.tmp
