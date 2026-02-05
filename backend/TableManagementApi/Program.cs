@@ -16,6 +16,13 @@ string connectionString = Environment.GetEnvironmentVariable("DB_CONNECTION_STRI
 builder.Services.AddScoped<TablesRepository>(_ => new TablesRepository(connectionString));
 builder.Services.AddScoped<TablesService>();
 
+builder.Services.AddCors(options =>
+{
+    options.AddDefaultPolicy(policy =>
+        policy.WithOrigins("http://localhost:4200") 
+              .AllowAnyHeader()
+              .AllowAnyMethod());
+});
 
 builder.Services.AddControllers();
 builder.Services.AddEndpointsApiExplorer();
@@ -31,6 +38,7 @@ if (app.Environment.IsDevelopment())
 }
 
 //app.UseHttpsRedirection();
+app.UseCors();
 
 app.UseAuthorization();
 
