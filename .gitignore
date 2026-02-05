@@ -26,6 +26,7 @@ out-tsc/
 
 # environment files (optional, sensitive)
 src/environments/*.ts
+*.env
 
 # logs
 *.log
