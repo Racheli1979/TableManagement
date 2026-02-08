@@ -2,8 +2,8 @@ using DotNetEnv;
 using Microsoft.AspNetCore.Builder;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Hosting;
-using TableManagementBl.Services;
-using TableManagementDal.Repositories;
+using TableManagementBl.BusinessObjects;
+using TableManagementDal.DataObjects;
 using System;
 
 var builder = WebApplication.CreateBuilder(args);
@@ -13,8 +13,8 @@ Env.Load();
 string connectionString = Environment.GetEnvironmentVariable("DB_CONNECTION_STRING");
 
 // 🔹 Register DAL and BL
-builder.Services.AddScoped<TablesRepository>(_ => new TablesRepository(connectionString));
-builder.Services.AddScoped<TablesService>();
+builder.Services.AddScoped<tablesDo>(_ => new tablesDo(connectionString));
+builder.Services.AddScoped<TablesBo>();
 
 builder.Services.AddCors(options =>
 {
