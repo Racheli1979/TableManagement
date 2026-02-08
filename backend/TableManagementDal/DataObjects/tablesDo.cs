@@ -1,6 +1,7 @@
-﻿using Microsoft.Data.SqlClient;
+﻿using Dapper;
 using System.Collections.Generic;
-using System.Dynamic;
+using System.Data;
+using Microsoft.Data.SqlClient;
 using System.Threading.Tasks;
 
 namespace TableManagementDal.DataObjects
@@ -16,28 +17,13 @@ namespace TableManagementDal.DataObjects
 
         public async Task<IEnumerable<dynamic>> GetAllTablesAsync()
         {
-            var tables = new List<dynamic>();
+            using var connection = new SqlConnection(_connectionString);
+            await connection.OpenAsync();
 
-            using (SqlConnection connection = new SqlConnection(_connectionString))
-            {
-                await connection.OpenAsync();
-
-                using (SqlCommand command = new SqlCommand("GetAllUserTables", connection))
-                {
-                    command.CommandType = System.Data.CommandType.StoredProcedure;
-
-                    using SqlDataReader reader = await command.ExecuteReaderAsync();
-                    while (await reader.ReadAsync())
-                    {
-                        dynamic table = new ExpandoObject();
-                        table.TableName = reader["TableName"].ToString();
-                        table.SchemaName = reader["SchemaName"].ToString();
-                        table.ObjectType = reader["ObjectType"].ToString();
-
-                        tables.Add(table);
-                    }
-                }
-            }
+            var tables = await connection.QueryAsync<dynamic>(
+                "GetAllUserTables",
+                commandType: CommandType.StoredProcedure
+            );
 
             return tables;
         }
