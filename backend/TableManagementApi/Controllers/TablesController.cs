@@ -1,9 +1,8 @@
 using Microsoft.AspNetCore.Mvc;
-using TableManagementBl.Services;
-using TableManagementBl.Models;
+using TableManagementBl.BusinessObjects;
 using TableManagementContracts;
 using System.Collections.Generic;
-using System.Linq;
+using System.Threading.Tasks;
 
 namespace TableManagementApi.Controllers
 {
@@ -11,25 +10,18 @@ namespace TableManagementApi.Controllers
     [Route("api/[controller]")]
     public class TablesController : ControllerBase
     {
-        private readonly TablesService _service;
+        private readonly TablesBo _tablesBo;
 
-        public TablesController(TablesService service)
+        public TablesController(TablesBo tablesBo)
         {
-            _service = service;
+            _tablesBo = tablesBo;
         }
 
         [HttpGet]
-        public List<TableMetadataDto> GetAllTables()
+        public async Task<IActionResult> GetAllTables()
         {
-            List<TableMetadataBo> tableBos = _service.GetAllTables();
-            List<TableMetadataDto> tableDtos = tableBos.Select(b => new TableMetadataDto
-            {
-                TableName = b.TableName,
-                SchemaName = b.SchemaName,
-                ObjectType = b.ObjectType
-            }).ToList();
-
-            return tableDtos;
+            List<TableMetadataDto> tableDtos = await _tablesBo.GetAllTablesAsync();
+            return Ok(tableDtos);
         }
     }
 }
