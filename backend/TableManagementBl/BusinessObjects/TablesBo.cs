@@ -1,5 +1,4 @@
 ﻿using TableManagementDal.DataObjects;
-using TableManagementBl.Models;
 using TableManagementContracts;
 using System.Collections.Generic;
 using System.Linq;
@@ -23,9 +22,9 @@ namespace TableManagementBl.BusinessObjects
             var tableDtos = rows
                 .Select(r => new TableMetadataDto
                 {
-                    TableName = r.TableName,
-                    SchemaName = r.SchemaName,
-                    ObjectType = r.ObjectType
+                    TableName = r.TableName ?? "",
+                    SchemaName = r.SchemaName ?? "",
+                    ObjectType = r.ObjectType ?? ""
                 })
                 .ToList();
 
