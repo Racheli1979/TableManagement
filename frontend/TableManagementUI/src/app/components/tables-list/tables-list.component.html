@@ -1,0 +1,32 @@
+<div class="tables-container">
+  <h2>Database Tables</h2>
+
+  <div *ngFor="let table of filteredTables" class="table-card">
+    <div class="table-header" (click)="toggleExpand(table)">
+      <strong>{{ table.tableName }}</strong>
+      <span>({{ table.objectType }})</span>
+      <span class="expand-icon">{{ table.expanded ? '▲' : '▼' }}</span>
+    </div>
+
+    <div *ngIf="table.expanded" class="columns-list">
+      <table>
+        <thead>
+          <tr>
+            <th>Column Name</th>
+            <th>Data Type</th>
+            <th>Nullable</th>
+            <th>Max Length</th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr *ngFor="let col of table.columns">
+            <td>{{ col.ColumnName }}</td>
+            <td>{{ col.DataType }}</td>
+            <td>{{ col.IsNullable }}</td>
+            <td>{{ col.MaxLength ?? '-' }}</td>
+          </tr>
+        </tbody>
+      </table>
+    </div>
+  </div>
+</div>
