@@ -8,6 +8,8 @@ import { TablesService, Table } from 'src/app/services/tables.service';
 })
 export class TablesListComponent implements OnInit {
   tables: Table[] = [];
+  filteredTables: Table[] = [];
+  searchTerm: string = '';
 
   constructor(private tablesService: TablesService) { }
 
@@ -19,6 +21,7 @@ export class TablesListComponent implements OnInit {
     this.tablesService.getTables().subscribe({
       next: (data: Table[]) => {
         this.tables = data;
+        this.filteredTables = data;
       },
       error: (err: any) => console.error(err)
     });
@@ -26,5 +29,13 @@ export class TablesListComponent implements OnInit {
 
   toggleExpand(table: Table): void {
     table.expanded = !table.expanded;
+  }
+
+  filterTables(): void {
+    const term = this.searchTerm.toLowerCase();
+    this.filteredTables = this.tables.filter(t =>
+      t.tableName.toLowerCase().includes(term) ||
+      t.schemaName.toLowerCase().includes(term)
+    );
   }
 }
