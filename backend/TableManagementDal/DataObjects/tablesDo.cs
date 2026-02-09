@@ -20,12 +20,10 @@ namespace TableManagementDal.DataObjects
             using var connection = new SqlConnection(_connectionString);
             await connection.OpenAsync();
 
-            var tables = await connection.QueryAsync<dynamic>(
+            return await connection.QueryAsync<dynamic>(
                 "GetAllUserTables",
                 commandType: CommandType.StoredProcedure
             );
-
-            return tables;
         }
     }
 }
