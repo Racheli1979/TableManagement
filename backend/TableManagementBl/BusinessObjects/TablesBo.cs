@@ -9,22 +9,36 @@ namespace TableManagementBl.BusinessObjects
     public class TablesBo
     {
         private readonly tablesDo _tablesDo;
+        private readonly columnsDo _columnsDo;
 
-        public TablesBo(tablesDo tablesDo)
+        public TablesBo(tablesDo tablesDo, columnsDo columnsDo)
         {
             _tablesDo = tablesDo;
+            _columnsDo = columnsDo;
         }
 
-        public async Task<List<TableMetadataDto>> GetAllTablesAsync()
+        public async Task<List<TableMetadataDto>> GetAllTablesWithColumnsAsync()
         {
-            var rows = await _tablesDo.GetAllTablesAsync();
+            var tables = (await _tablesDo.GetAllTablesAsync()).ToList();
 
-            var tableDtos = rows
-                .Select(r => new TableMetadataDto
+            var columns = (await _columnsDo.GetAllColumnsAsync()).ToList();
+
+            var tableDtos = tables
+                .Select(t => new TableMetadataDto
                 {
-                    TableName = r.TableName ?? "",
-                    SchemaName = r.SchemaName ?? "",
-                    ObjectType = r.ObjectType ?? ""
+                    TableName = t.TableName ?? "",
+                    SchemaName = t.SchemaName ?? "",
+                    ObjectType = t.ObjectType ?? "",
+                    Columns = columns
+                        .Where(c => c.TableName == t.TableName && c.SchemaName == t.SchemaName)
+                        .Select(c => new Dictionary<string, object>
+                        {
+                            { "ColumnName", c.ColumnName },
+                            { "DataType", c.DataType },
+                            { "IsNullable", c.IsNullable },
+                            { "MaxLength", c.MaxLength }
+                        })
+                        .ToList()
                 })
                 .ToList();
 

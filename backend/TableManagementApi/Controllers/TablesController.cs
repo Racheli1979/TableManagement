@@ -20,7 +20,7 @@ namespace TableManagementApi.Controllers
         [HttpGet]
         public async Task<IActionResult> GetAllTables()
         {
-            List<TableMetadataDto> tableDtos = await _tablesBo.GetAllTablesAsync();
+            List<TableMetadataDto> tableDtos = await _tablesBo.GetAllTablesWithColumnsAsync();
             return Ok(tableDtos);
         }
     }

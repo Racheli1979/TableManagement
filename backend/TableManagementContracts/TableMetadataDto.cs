@@ -5,6 +5,6 @@ namespace TableManagementContracts
         public string TableName { get; set; }
         public string SchemaName { get; set; }
         public string ObjectType { get; set; }
-        public List<ColumnMetadataDto> Columns { get; set; } = new List<ColumnMetadataDto>();
+        public List<Dictionary<string, object>> Columns { get; set; } = new List<Dictionary<string, object>>();
     }
 }

@@ -14,9 +14,8 @@ string connectionString = Environment.GetEnvironmentVariable("DB_CONNECTION_STRI
 
 // 🔹 Register DAL and BL
 builder.Services.AddScoped<tablesDo>(_ => new tablesDo(connectionString));
+builder.Services.AddScoped<columnsDo>(_ => new columnsDo(connectionString)); // עדיין דרוש ל-TablesBo
 builder.Services.AddScoped<TablesBo>();
-builder.Services.AddScoped<columnsDo>(_ => new columnsDo(connectionString));
-builder.Services.AddScoped<ColumnsBo>();
 
 builder.Services.AddCors(options =>
 {
