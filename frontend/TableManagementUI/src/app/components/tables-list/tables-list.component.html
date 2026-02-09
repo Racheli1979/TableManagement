@@ -1,7 +1,14 @@
 <div class="tables-container">
   <h2>Database Tables</h2>
 
-  <div *ngFor="let table of tables" class="table-card">
+  <input
+    type="text"
+    placeholder="Search tables..."
+    [(ngModel)]="searchTerm"
+    (input)="filterTables()"
+  />
+
+  <div *ngFor="let table of filteredTables" class="table-card">
     <div class="table-header" (click)="toggleExpand(table)">
       <strong>{{ table.tableName }}</strong>
       <span>({{ table.objectType }})</span>
