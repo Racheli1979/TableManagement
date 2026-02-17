@@ -44,5 +44,13 @@ namespace TableManagementBl.BusinessObjects
 
             return tableDtos;
         }
+
+        public async Task<List<SearchResultDto>> GlobalSearch(string term)
+        {
+            if (string.IsNullOrWhiteSpace(term))
+                return new List<SearchResultDto>();
+
+            return await _tablesDo.GlobalSearch(term);
+        }
     }
 }

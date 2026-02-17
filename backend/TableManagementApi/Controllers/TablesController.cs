@@ -23,5 +23,12 @@ namespace TableManagementApi.Controllers
             List<TableMetadataDto> tableDtos = await _tablesBo.GetAllTablesWithColumnsAsync();
             return Ok(tableDtos);
         }
+
+        [HttpGet("search")]
+        public async Task<IActionResult> GlobalSearch([FromQuery] string term)
+        {
+            var results = await _tablesBo.GlobalSearch(term);
+            return Ok(results);
+        }
     }
 }

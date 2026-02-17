@@ -3,37 +3,70 @@
 
   <input
     type="text"
-    placeholder="Search tables..."
-    [(ngModel)]="searchTerm"
+    placeholder="Global search..."
+    [(ngModel)]="searchTermGlobal"
+    (input)="searchGlobalInput()"
+  />
+
+  <input
+    type="text"
+    placeholder="Filter by table name..."
+    [(ngModel)]="searchTermTable"
     (input)="filterTables()"
   />
 
   <div *ngFor="let table of filteredTables" class="table-card">
-    <div class="table-header" (click)="toggleExpand(table)">
+
+    <div *ngIf="!isGlobalSearch" class="table-header">
+      <strong>{{ table.tableName }}</strong>
+      <span>({{ table.objectType }})</span>
+    </div>
+
+    <div *ngIf="isGlobalSearch" class="table-header" (click)="toggleExpand(table)">
       <strong>{{ table.tableName }}</strong>
       <span>({{ table.objectType }})</span>
       <span class="expand-icon">{{ table.expanded ? '▲' : '▼' }}</span>
     </div>
 
-    <div *ngIf="table.expanded" class="columns-list">
-      <table>
-        <thead>
-          <tr>
-            <th>Column Name</th>
-            <th>Data Type</th>
-            <th>Nullable</th>
-            <th>Max Length</th>
-          </tr>
-        </thead>
-        <tbody>
-          <tr *ngFor="let col of table.columns">
-            <td>{{ col.ColumnName }}</td>
-            <td>{{ col.DataType }}</td>
-            <td>{{ col.IsNullable }}</td>
-            <td>{{ col.MaxLength ?? '-' }}</td>
-          </tr>
-        </tbody>
-      </table>
+    <div *ngIf="table.expanded || isTableNameSearch">
+
+      <ng-container *ngIf="isTableNameSearch">
+        <div class="columns-list">
+          <table>
+            <thead>
+              <tr>
+                <th>Column Name</th>
+                <th>Data Type</th>
+              </tr>
+            </thead>
+            <tbody>
+              <tr *ngFor="let col of table.columns">
+                <td>{{ col.ColumnName }}</td>
+                <td>{{ col.DataType }}</td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
+      </ng-container>
+
+      <ng-container *ngIf="isGlobalSearch && table.rowData?.length">
+        <div class="columns-list">
+          <table>
+            <thead>
+              <tr>
+                <th *ngFor="let col of getColumns(table.rowData?.[0])">{{ col }}</th>
+              </tr>
+            </thead>
+            <tbody>
+              <tr *ngFor="let row of table.rowData">
+                <td *ngFor="let col of getColumns(row)">{{ row[col] }}</td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
+      </ng-container>
+
     </div>
+
   </div>
 </div>

@@ -14,6 +14,7 @@ export interface Table {
   schemaName: string;
   objectType: string;
   columns: Column[];
+  rowData?: any[];
   expanded?: boolean;
 }
 
@@ -28,4 +29,8 @@ export class TablesService {
   getTables(): Observable<Table[]> {
     return this.http.get<Table[]>(this.apiUrl);
   }
+
+  getGlobalSearch(term: string): Observable<Table[]> {
+  return this.http.get<Table[]>(`${this.apiUrl}/search?term=${term}`);
+}
 }
