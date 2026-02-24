@@ -48,5 +48,28 @@ namespace TableManagementDal.DataObjects
                     PropertyNameCaseInsensitive = true
                 }) ?? new List<SearchResultDto>();
         }
+
+        public async Task<IEnumerable<dynamic>> ColumnSearch(
+            string tableName,
+            List<string> columns,
+            string searchValue)
+        {
+            using var connection = new SqlConnection(_connectionString);
+
+            string columnsCsv = string.Join(",", columns);
+
+            var parameters = new DynamicParameters();
+            parameters.Add("@TableName", tableName, DbType.String);
+            parameters.Add("@Columns", columnsCsv, DbType.String);
+            parameters.Add("@SearchValue", searchValue, DbType.String);
+
+            var result = await connection.QueryAsync(
+                "SearchTableColumns",
+                parameters,
+                commandType: CommandType.StoredProcedure
+            );
+
+            return result;
+        }
     }
 }

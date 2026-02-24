@@ -3,6 +3,7 @@ using TableManagementContracts;
 using System.Collections.Generic;
 using System.Linq;
 using System.Threading.Tasks;
+using System.Text.RegularExpressions;
 
 namespace TableManagementBl.BusinessObjects
 {
@@ -51,6 +52,32 @@ namespace TableManagementBl.BusinessObjects
                 return new List<SearchResultDto>();
 
             return await _tablesDo.GlobalSearch(term);
+        }
+
+        public async Task<IEnumerable<dynamic>> ColumnSearch(string tableName, List<string> columns, string searchValue)
+        {
+            if (string.IsNullOrWhiteSpace(tableName))
+                throw new ArgumentException("Table name is required");
+
+            if (columns == null || columns.Count == 0)
+                throw new ArgumentException("At least one column is required");
+
+            if (string.IsNullOrWhiteSpace(searchValue))
+                throw new ArgumentException("Search value is required");
+
+            if (searchValue.Length > 100)
+                throw new ArgumentException("Search value too long");
+
+            if (!Regex.IsMatch(tableName, @"^[a-zA-Z0-9_]+$"))
+                throw new ArgumentException($"Invalid table name: {tableName}");
+
+            foreach (var col in columns)
+            {
+                if (!Regex.IsMatch(col, @"^[a-zA-Z0-9_]+$"))
+                    throw new ArgumentException($"Invalid column name: {col}");
+            }
+
+            return await _tablesDo.ColumnSearch(tableName, columns, searchValue);
         }
     }
 }
