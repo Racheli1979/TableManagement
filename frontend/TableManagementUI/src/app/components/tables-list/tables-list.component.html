@@ -1,70 +1,81 @@
 <div class="tables-container">
   <h2>Database Tables</h2>
 
-  <input
-    type="text"
-    placeholder="Global search..."
-    [(ngModel)]="searchTermGlobal"
-    (input)="searchGlobalInput()"
-  />
+  <div class="search-inputs">
+    <input
+      type="text"
+      placeholder="Global search..."
+      [(ngModel)]="searchTermGlobal"
+      (input)="searchGlobalInput()"
+    />
 
-  <input
-    type="text"
-    placeholder="Filter by table name..."
-    [(ngModel)]="searchTermTable"
-    (input)="filterTables()"
-  />
+    <input
+      type="text"
+      placeholder="Filter by table name..."
+      [(ngModel)]="searchTermTable"
+      (input)="filterTables()"
+    />
+  </div>
 
   <div *ngFor="let table of filteredTables" class="table-card">
 
-    <div *ngIf="!isGlobalSearch" class="table-header">
+    <div class="table-header"
+         [class.clickable]="viewMode !== 'initial'"
+         (click)="toggleExpand(table)">
       <strong>{{ table.tableName }}</strong>
+      <span *ngIf="viewMode !== 'initial'">{{ table.expanded ? '▼' : '▶' }}</span>
     </div>
 
-    <div *ngIf="isGlobalSearch" class="table-header" (click)="toggleExpand(table)">
-      <strong>{{ table.tableName }}</strong>
-      <span class="expand-icon">{{ table.expanded ? '▲' : '▼' }}</span>
-    </div>
+    <div *ngIf="table.expanded">
 
-    <div *ngIf="table.expanded || isTableNameSearch">
+      <div class="columns-list" *ngIf="viewMode === 'tableSearch' && table === selectedTableForColumnSearch">
+        <table>
+          <thead>
+            <tr>
+              <th>Column Name</th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr *ngFor="let col of table.columns">
+              <td>{{ col.ColumnName }}</td>
+            </tr>
+          </tbody>
+        </table>
 
-      <ng-container *ngIf="isTableNameSearch">
-        <div class="columns-list">
-          <table>
-            <thead>
-              <tr>
-                <th>Column Name</th>
-                <!-- <th>Data Type</th> -->
-              </tr>
-            </thead>
-            <tbody>
-              <tr *ngFor="let col of table.columns">
-                <td>{{ col.ColumnName }}</td>
-                <!-- <td>{{ col.DataType }}</td> -->
-              </tr>
-            </tbody>
-          </table>
+        <div class="column-search">
+          <label>בחר עמודות לחיפוש:</label>
+
+          <div>
+            <input type="checkbox" [checked]="selectAllColumns" (change)="toggleSelectAll(table, $event)"> הכל
+          </div>
+
+          <div *ngFor="let col of table.columns">
+            <input type="checkbox"
+                   [checked]="selectedColumnsForSearch.includes(col.ColumnName)"
+                   (change)="toggleColumn(col.ColumnName, $event)">
+            {{ col.ColumnName }}
+          </div>
+
+          <input type="text" placeholder="Search value..." [(ngModel)]="columnSearchValue">
+          <button type="button" (click)="searchByColumns()">Search</button>
         </div>
-      </ng-container>
+      </div>
 
-      <ng-container *ngIf="isGlobalSearch && table.rowData?.length">
-        <div class="columns-list">
-          <table>
-            <thead>
-              <tr>
-                <th *ngFor="let col of getColumns(table.rowData?.[0])">{{ col }}</th>
-              </tr>
-            </thead>
-            <tbody>
-              <tr *ngFor="let row of table.rowData">
-                <td *ngFor="let col of getColumns(row)">{{ row[col] }}</td>
-              </tr>
-            </tbody>
-          </table>
-        </div>
-      </ng-container>
+      <div *ngIf="table.rowData?.length">
+        <table>
+          <thead>
+            <tr>
+              <th *ngFor="let col of getColumns(table.rowData?.[0])">{{ col }}</th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr *ngFor="let row of table.rowData">
+              <td *ngFor="let col of getColumns(row)">{{ row[col] }}</td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
 
     </div>
-
   </div>
 </div>

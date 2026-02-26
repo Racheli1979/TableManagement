@@ -25,12 +25,21 @@ export class TablesService {
   private apiUrl = 'http://localhost:5081/api/tables';
 
   constructor(private http: HttpClient) { }
-  
+
   getTables(): Observable<Table[]> {
     return this.http.get<Table[]>(this.apiUrl);
   }
 
   getGlobalSearch(term: string): Observable<Table[]> {
-  return this.http.get<Table[]>(`${this.apiUrl}/search?term=${term}`);
-}
+    return this.http.get<Table[]>(`${this.apiUrl}/search?term=${term}`);
+  }
+
+  // חיפוש לפי עמודות
+  searchColumns(tableName: string, columns: string[], searchValue: string): Observable<Table[]> {
+    return this.http.post<Table[]>(`${this.apiUrl}/search-columns`, {
+      tableName,
+      columns,
+      searchValue
+    });
+  }
 }
