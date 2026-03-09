@@ -6,22 +6,18 @@
       type="text"
       placeholder="Global search..."
       [(ngModel)]="searchTermGlobal"
-      (input)="searchGlobalInput()"
+      (input)="onGlobalSearchInput(searchTermGlobal)"
     />
-
     <input
       type="text"
       placeholder="Filter by table name..."
       [(ngModel)]="searchTermTable"
-      (input)="filterTables()"
+      (input)="onTableSearchInput(searchTermTable)"
     />
   </div>
 
   <div *ngFor="let table of filteredTables" class="table-card">
-
-    <div class="table-header"
-         [class.clickable]="viewMode !== 'initial'"
-         (click)="toggleExpand(table)">
+    <div class="table-header" [class.clickable]="viewMode !== 'initial'" (click)="toggleExpand(table)">
       <strong>{{ table.tableName }}</strong>
       <span *ngIf="viewMode !== 'initial'">{{ table.expanded ? '▼' : '▶' }}</span>
     </div>
@@ -44,11 +40,9 @@
 
         <div class="column-search">
           <label>בחר עמודות לחיפוש:</label>
-
           <div>
             <input type="checkbox" [checked]="selectAllColumns" (change)="toggleSelectAll(table, $event)"> הכל
           </div>
-
           <div *ngFor="let col of table.columns">
             <input type="checkbox"
                    [checked]="selectedColumnsForSearch.includes(col.ColumnName)"
@@ -56,11 +50,14 @@
             {{ col.ColumnName }}
           </div>
 
-          <input type="text" placeholder="Search value..." [(ngModel)]="columnSearchValue">
-          <button type="button" (click)="searchByColumns()">Search</button>
+          <input type="text"
+                 placeholder="Search value..."
+                 [(ngModel)]="columnSearchValue"
+                 (blur)="onColumnSearchInput(columnSearchValue)"
+          />
         </div>
       </div>
-
+<!-- (input / blur)="onColumnSearchInput(columnSearchValue)" -->
       <div *ngIf="table.rowData?.length">
         <table>
           <thead>
