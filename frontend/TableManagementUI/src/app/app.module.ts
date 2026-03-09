@@ -6,11 +6,13 @@ import { AppComponent } from './app.component';
 import { TablesListComponent } from './components/tables-list/tables-list.component';
 import { HttpClientModule } from '@angular/common/http';
 import { FormsModule } from '@angular/forms';
+import { EditRecordModalComponent } from './components/edit-record-modal/edit-record-modal.component';
 
 @NgModule({
   declarations: [
     AppComponent,
-    TablesListComponent
+    TablesListComponent,
+    EditRecordModalComponent
   ],
   imports: [
     HttpClientModule,

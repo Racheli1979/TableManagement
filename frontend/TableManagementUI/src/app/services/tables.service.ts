@@ -34,7 +34,6 @@ export class TablesService {
     return this.http.get<Table[]>(`${this.apiUrl}/search?term=${term}`);
   }
 
-  // חיפוש לפי עמודות
   searchColumns(tableName: string, columns: string[], searchValue: string): Observable<Table[]> {
     return this.http.post<Table[]>(`${this.apiUrl}/search-columns`, {
       tableName,
