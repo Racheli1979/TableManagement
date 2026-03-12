@@ -2,18 +2,10 @@
   <h2>Database Tables</h2>
 
   <div class="search-inputs">
-    <input
-      type="text"
-      placeholder="Global search..."
-      [(ngModel)]="searchTermGlobal"
-      (input)="onGlobalSearchInput(searchTermGlobal)"
-    />
-    <input
-      type="text"
-      placeholder="Filter by table name..."
-      [(ngModel)]="searchTermTable"
-      (input)="onTableSearchInput(searchTermTable)"
-    />
+    <input type="text" placeholder="Global search..." [(ngModel)]="searchTermGlobal"
+      (input)="onGlobalSearchInput(searchTermGlobal)" />
+    <input type="text" placeholder="Filter by table name..." [(ngModel)]="searchTermTable"
+      (input)="onTableSearchInput(searchTermTable)" />
   </div>
 
   <div *ngFor="let table of filteredTables" class="table-card">
@@ -44,20 +36,16 @@
             <input type="checkbox" [checked]="selectAllColumns" (change)="toggleSelectAll(table, $event)"> הכל
           </div>
           <div *ngFor="let col of table.columns">
-            <input type="checkbox"
-                   [checked]="selectedColumnsForSearch.includes(col.ColumnName)"
-                   (change)="toggleColumn(col.ColumnName, $event)">
+            <input type="checkbox" [checked]="selectedColumnsForSearch.includes(col.ColumnName)"
+              (change)="toggleColumn(col.ColumnName, $event)">
             {{ col.ColumnName }}
           </div>
 
-          <input type="text"
-                 placeholder="Search value..."
-                 [(ngModel)]="columnSearchValue"
-                 (blur)="onColumnSearchInput(columnSearchValue)"
-          />
+          <input type="text" placeholder="Search value..." [(ngModel)]="columnSearchValue"
+            (blur)="onColumnSearchInput(columnSearchValue)" />
         </div>
       </div>
-<!-- (input / blur)="onColumnSearchInput(columnSearchValue)" -->
+      <!-- (input / blur)="onColumnSearchInput(columnSearchValue)" -->
       <div *ngIf="table.rowData?.length">
         <table>
           <thead>
@@ -68,6 +56,9 @@
           <tbody>
             <tr *ngFor="let row of table.rowData">
               <td *ngFor="let col of getColumns(row)">{{ row[col] }}</td>
+              <td>
+                <button (click)="openEditModal(row, table)">✏️</button>
+              </td>
             </tr>
           </tbody>
         </table>
@@ -76,3 +67,11 @@
     </div>
   </div>
 </div>
+
+<app-edit-record-modal
+  *ngIf="selectedRecord"
+  [row]="selectedRecord"
+  [columns]="selectedTableForEdit?.columns || []"
+  [tableName]="selectedTableForEdit?.tableName || ''"
+  (close)="selectedRecord = null">
+</app-edit-record-modal>

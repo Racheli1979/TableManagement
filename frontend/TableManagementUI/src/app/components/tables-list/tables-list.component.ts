@@ -17,6 +17,9 @@ export class TablesListComponent implements OnInit, OnDestroy {
   searchTermTable: string = '';
   columnSearchValue: string = '';
 
+  selectedRecord: any = null;
+  selectedTableForEdit: Table | null = null;
+
   viewMode: 'initial' | 'tableSearch' | 'globalSearch' = 'initial';
 
   selectedTableForColumnSearch: Table | null = null;
@@ -71,8 +74,8 @@ export class TablesListComponent implements OnInit, OnDestroy {
   onTableSearchInput(term: string) { this.tableSearchSubject.next(term); }
   onColumnSearchInput(value: string) {
     if (!value || !value.trim()) {
-      this.resetColumnResults(); 
-      return;                  
+      this.resetColumnResults();
+      return;
     }
     this.columnSearchSubject.next(value);
   }
@@ -175,16 +178,21 @@ export class TablesListComponent implements OnInit, OnDestroy {
   }
 
   private resetColumnResults(): void {
-    this.columnSearchValue = ''; 
+    this.columnSearchValue = '';
 
     if (this.selectedTableForColumnSearch) {
       const tableCopy = {
         ...this.selectedTableForColumnSearch,
-        expanded: true,  
-        rowData: []     
+        expanded: true,
+        rowData: []
       };
 
       this.filteredTables = [tableCopy];
     }
+  }
+
+  openEditModal(record: any, table: Table) {
+    this.selectedRecord = { ...record };
+    this.selectedTableForEdit = table;
   }
 }

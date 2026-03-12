@@ -1,1 +1,37 @@
-<p>edit-record-modal works!</p>
+<div class="modal-overlay">
+
+  <div class="modal">
+
+    <div class="modal-header">
+      <h2>Edit {{ tableName }}</h2>
+      <button class="close-btn" (click)="cancel()">✖</button>
+    </div>
+
+    <div class="modal-body">
+
+      <form class="form-grid">
+
+        <div *ngFor="let col of columns" class="form-field">
+
+          <label>{{ col.ColumnName }}</label>
+
+          <input
+            [type]="getInputType(col)"
+            [(ngModel)]="row[col.ColumnName]"
+            name="{{ col.ColumnName }}"
+          />
+
+        </div>
+
+      </form>
+
+    </div>
+
+    <div class="modal-footer">
+      <button (click)="cancel()">Cancel</button>
+      <button class="save-btn" (click)="saveRecord()">Save</button>
+    </div>
+
+  </div>
+
+</div>
