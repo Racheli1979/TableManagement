@@ -15,7 +15,6 @@
     </div>
 
     <div *ngIf="table.expanded">
-
       <div class="columns-list" *ngIf="viewMode === 'tableSearch' && table === selectedTableForColumnSearch">
         <table>
           <thead>
@@ -25,7 +24,7 @@
           </thead>
           <tbody>
             <tr *ngFor="let col of table.columns">
-              <td>{{ col.ColumnName }}</td>
+              <td>{{ col.columnName }}</td>
             </tr>
           </tbody>
         </table>
@@ -36,21 +35,22 @@
             <input type="checkbox" [checked]="selectAllColumns" (change)="toggleSelectAll(table, $event)"> הכל
           </div>
           <div *ngFor="let col of table.columns">
-            <input type="checkbox" [checked]="selectedColumnsForSearch.includes(col.ColumnName)"
-              (change)="toggleColumn(col.ColumnName, $event)">
-            {{ col.ColumnName }}
+            <input type="checkbox" [checked]="selectedColumnsForSearch.includes(col.columnName)"
+              (change)="toggleColumn(col.columnName, $event)">
+            {{ col.columnName }}
           </div>
 
           <input type="text" placeholder="Search value..." [(ngModel)]="columnSearchValue"
             (blur)="onColumnSearchInput(columnSearchValue)" />
         </div>
       </div>
-      <!-- (input / blur)="onColumnSearchInput(columnSearchValue)" -->
+
       <div *ngIf="table.rowData?.length">
         <table>
           <thead>
             <tr>
               <th *ngFor="let col of getColumns(table.rowData?.[0])">{{ col }}</th>
+              <th>Actions</th>
             </tr>
           </thead>
           <tbody>

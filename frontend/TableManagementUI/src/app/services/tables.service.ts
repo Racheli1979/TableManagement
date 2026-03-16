@@ -3,10 +3,10 @@ import { HttpClient } from '@angular/common/http';
 import { Observable } from 'rxjs';
 
 export interface Column {
-  ColumnName: string;
-  DataType: string;
-  IsNullable: string;
-  MaxLength: number | null;
+  columnName: string;
+  dataType: string;
+  isNullable: string;
+  maxLength: number | null;
 }
 
 export interface Table {
@@ -24,7 +24,7 @@ export interface Table {
 export class TablesService {
   private apiUrl = 'http://localhost:5081/api/tables';
 
-  constructor(private http: HttpClient) { }
+  constructor(private http: HttpClient) {}
 
   getTables(): Observable<Table[]> {
     return this.http.get<Table[]>(this.apiUrl);

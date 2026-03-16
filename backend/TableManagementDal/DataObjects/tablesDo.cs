@@ -5,6 +5,7 @@ using Microsoft.Data.SqlClient;
 using System.Threading.Tasks;
 using TableManagementContracts;
 using System.Text.Json;
+using System.Text.Json.Serialization;
 
 namespace TableManagementDal.DataObjects
 {
@@ -33,22 +34,34 @@ namespace TableManagementDal.DataObjects
             await using var connection = new SqlConnection(_connectionString);
             await connection.OpenAsync();
 
-            var json = await connection.QueryFirstOrDefaultAsync<string>(
+            var jsonChunks = await connection.QueryAsync<string>(
                 "GlobalSearchAllTables",
                 new { SearchTerm = searchTerm },
-                commandType: CommandType.StoredProcedure);
+                commandType: CommandType.StoredProcedure
+            );
 
-            if (string.IsNullOrWhiteSpace(json))
+            var fullJson = string.Concat(jsonChunks);
+
+            if (string.IsNullOrWhiteSpace(fullJson))
                 return new List<SearchResultDto>();
 
-            return JsonSerializer.Deserialize<List<SearchResultDto>>(
-                json,
-                new JsonSerializerOptions
-                {
-                    PropertyNameCaseInsensitive = true
-                }) ?? new List<SearchResultDto>();
-        }
+            var options = new JsonSerializerOptions
+            {
+                PropertyNameCaseInsensitive = true, 
+                NumberHandling = JsonNumberHandling.AllowReadingFromString
+            };
 
+            try 
+            {
+                return JsonSerializer.Deserialize<List<SearchResultDto>>(fullJson, options) 
+                    ?? new List<SearchResultDto>();
+            }
+            catch (JsonException ex)
+            {
+                throw new Exception($"Parsing failed. Content length: {fullJson.Length}", ex);
+            }
+        }
+        
         public async Task<IEnumerable<dynamic>> ColumnSearch(
             string tableName,
             List<string> columns,

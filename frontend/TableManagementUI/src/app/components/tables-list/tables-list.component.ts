@@ -1,5 +1,5 @@
 import { Component, OnInit, OnDestroy } from '@angular/core';
-import { TablesService, Table } from 'src/app/services/tables.service';
+import { TablesService, Table, Column } from 'src/app/services/tables.service';
 import { Subject, Subscription } from 'rxjs';
 import { debounceTime, distinctUntilChanged } from 'rxjs/operators';
 
@@ -35,34 +35,36 @@ export class TablesListComponent implements OnInit, OnDestroy {
   constructor(private tablesService: TablesService) { }
 
   ngOnInit(): void {
-    console.log('INIT COMPONENT');
     this.tablesService.getTables().subscribe({
       next: (data: Table[]) => {
-        this.allTables = data.map(t => ({ ...t, expanded: false }));
+        this.allTables = data.map(t => ({
+          ...t,
+          expanded: false,
+          columns: t.columns.map((c: any) => ({
+            columnName: c.columnName || c.ColumnName,
+            dataType: c.dataType || c.DataType,
+            isNullable: c.isNullable || c.IsNullable || "true",
+            maxLength: c.maxLength || c.MaxLength || 255
+          }))
+        }));
         this.filteredTables = this.allTables;
         this.viewMode = 'initial';
       }
     });
 
     this.subscriptions.push(
-      this.globalSearchSubject.pipe(
-        debounceTime(300),
-        distinctUntilChanged()
-      ).subscribe(term => this.performGlobalSearch(term))
+      this.globalSearchSubject.pipe(debounceTime(300), distinctUntilChanged())
+        .subscribe(term => this.performGlobalSearch(term))
     );
 
     this.subscriptions.push(
-      this.tableSearchSubject.pipe(
-        debounceTime(200),
-        distinctUntilChanged()
-      ).subscribe(term => this.performTableFilter(term))
+      this.tableSearchSubject.pipe(debounceTime(200), distinctUntilChanged())
+        .subscribe(term => this.performTableFilter(term))
     );
 
     this.subscriptions.push(
-      this.columnSearchSubject.pipe(
-        debounceTime(300),
-        distinctUntilChanged()
-      ).subscribe(value => this.performColumnSearch(value))
+      this.columnSearchSubject.pipe(debounceTime(300), distinctUntilChanged())
+        .subscribe(value => this.performColumnSearch(value))
     );
   }
 
@@ -90,7 +92,20 @@ export class TablesListComponent implements OnInit, OnDestroy {
     this.viewMode = 'globalSearch';
     this.tablesService.getGlobalSearch(term).subscribe({
       next: (data) => {
-        this.filteredTables = data.filter(t => t.rowData?.length).map(t => ({ ...t, expanded: false }));
+        this.filteredTables = data.filter(t => t.rowData?.length).map(t => {
+          const tableColumns: Column[] = t.columns.map((c: any) => ({
+            columnName: c.columnName || c.ColumnName,
+            dataType: c.dataType || c.DataType,
+            isNullable: "true",
+            maxLength: 255
+          }));
+
+          return {
+            ...t,
+            columns: tableColumns,
+            expanded: false
+          } as Table;
+        });
       }
     });
   }
@@ -123,30 +138,21 @@ export class TablesListComponent implements OnInit, OnDestroy {
     ).subscribe({
       next: (data: any[]) => {
         if (data.length) {
+          const originalTable = this.allTables.find(t => t.tableName === this.selectedTableForColumnSearch?.tableName);
+
           const table: Table = {
-            tableName: this.selectedTableForColumnSearch!.tableName,
-            schemaName: this.selectedTableForColumnSearch!.schemaName || 'dbo',
-            objectType: this.selectedTableForColumnSearch!.objectType || 'TABLE',
-            columns: Object.keys(data[0]).map(col => ({
-              ColumnName: col,
-              DataType: 'string',
-              IsNullable: 'YES',
-              MaxLength: 255
-            })),
+            ...this.selectedTableForColumnSearch!,
+            columns: originalTable ? originalTable.columns : this.selectedTableForColumnSearch!.columns,
             rowData: data,
             expanded: true
           };
+
           this.selectedTableForColumnSearch = table;
           this.filteredTables = [table];
-          this.selectAllColumns = this.selectedColumnsForSearch.length === table.columns.length;
-        } else {
-          this.selectedTableForColumnSearch = null;
-          this.filteredTables = [];
         }
       }
     });
   }
-
   toggleExpand(table: Table): void {
     table.expanded = !table.expanded;
     if (table.expanded) {
@@ -170,7 +176,7 @@ export class TablesListComponent implements OnInit, OnDestroy {
 
   toggleSelectAll(table: Table, event: any): void {
     this.selectAllColumns = event.target.checked;
-    this.selectedColumnsForSearch = this.selectAllColumns ? table.columns.map(c => c.ColumnName) : [];
+    this.selectedColumnsForSearch = this.selectAllColumns ? table.columns.map(c => c.columnName) : [];
   }
 
   getColumns(row: any): string[] {
@@ -179,14 +185,12 @@ export class TablesListComponent implements OnInit, OnDestroy {
 
   private resetColumnResults(): void {
     this.columnSearchValue = '';
-
     if (this.selectedTableForColumnSearch) {
       const tableCopy = {
         ...this.selectedTableForColumnSearch,
         expanded: true,
         rowData: []
       };
-
       this.filteredTables = [tableCopy];
     }
   }

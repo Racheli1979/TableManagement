@@ -9,12 +9,14 @@ BEGIN
 
     CREATE TABLE #Results (
         TableName NVARCHAR(128),
-        RowJson NVARCHAR(MAX)
+        RowJson NVARCHAR(MAX),
+        ColumnsJson NVARCHAR(MAX)  
     );
 
     DECLARE @TableName NVARCHAR(128);
     DECLARE @SQL NVARCHAR(MAX);
     DECLARE @Where NVARCHAR(MAX);
+    DECLARE @Columns NVARCHAR(MAX);
 
     DECLARE table_cursor CURSOR FOR
     SELECT TABLE_NAME
@@ -32,16 +34,25 @@ BEGIN
         )
         FROM INFORMATION_SCHEMA.COLUMNS
         WHERE TABLE_NAME = @TableName
-        AND DATA_TYPE IN ('nvarchar','varchar','char','nchar','text','ntext');
+          AND DATA_TYPE IN ('nvarchar','varchar','char','nchar','text','ntext');
+
+        SELECT @Columns = (SELECT STRING_AGG(
+                                '{"ColumnName":"' + COLUMN_NAME + '","DataType":"' + DATA_TYPE + '"}',
+                                ','
+                            )
+                            FROM INFORMATION_SCHEMA.COLUMNS
+                            WHERE TABLE_NAME = @TableName);
 
         IF @Where IS NOT NULL
         BEGIN
             SET @SQL = '
-                INSERT INTO #Results (TableName, RowJson)
+                INSERT INTO #Results (TableName, RowJson, ColumnsJson)
                 SELECT ''' + @TableName + ''',
                        (SELECT * FROM ' + QUOTENAME(@TableName) + '
                         WHERE ' + @Where + '
-                        FOR JSON PATH, WITHOUT_ARRAY_WRAPPER)';
+                        FOR JSON PATH, WITHOUT_ARRAY_WRAPPER),
+                       ''[' + @Columns + ']''
+            ';
             EXEC sp_executesql @SQL;
         END
 
@@ -53,9 +64,10 @@ BEGIN
 
     SELECT
         TableName AS tableName,
-        JSON_QUERY('[' + STRING_AGG(RowJson, ',') + ']') AS rowData
+        JSON_QUERY('[' + STRING_AGG(RowJson, ',') + ']') AS rowData,
+        JSON_QUERY(ColumnsJson) AS columns   
     FROM #Results
-    GROUP BY TableName
+    GROUP BY TableName, ColumnsJson
     FOR JSON PATH;
 END
 GO
