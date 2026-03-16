@@ -1,4 +1,4 @@
-CREATE PROCEDURE dbo.GetColumnsForTable
+CREATE PROCEDURE GetColumnsForTable
 AS
 BEGIN
     SET NOCOUNT ON;

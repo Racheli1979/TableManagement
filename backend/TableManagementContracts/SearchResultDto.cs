@@ -1,13 +1,16 @@
-namespace TableManagementContracts;
-
-public class SearchResultDto
+namespace TableManagementContracts
 {
-    public string TableName { get; set; }
-    public List<Dictionary<string, object>> RowData { get; set; } = new();
-}
+    public class SearchResultDto
+    {
+    
+        public string TableName { get; set; } = string.Empty;
+        public List<Dictionary<string, object>> RowData { get; set; } = new();
+        public List<ColumnDto> Columns { get; set; } = new();
+    }
 
-// public class GlobalSearchResult
-// {
-//     public string tableName { get; set; }
-//     public List<Dictionary<string, object>> rowData { get; set; }
-// }
+    public class ColumnDto
+    {
+        public string ColumnName { get; set; } = string.Empty;
+        public string DataType { get; set; } = string.Empty;
+    }
+}

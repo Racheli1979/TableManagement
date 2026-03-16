@@ -1,40 +1,73 @@
-ALTER PROCEDURE GlobalSearchAllTables
+CREATE PROCEDURE GlobalSearchAllTables
     @SearchTerm NVARCHAR(100)
 AS
 BEGIN
     SET NOCOUNT ON;
 
-    DECLARE @SQL NVARCHAR(MAX) = '';
-    DECLARE @Param NVARCHAR(110) = '%' + @SearchTerm + '%';
+    IF OBJECT_ID('tempdb..#Results') IS NOT NULL
+        DROP TABLE #Results;
 
-    -- בחר את כל הטבלאות והעמודות הרלוונטיות
-    SELECT @SQL = @SQL + '
-        SELECT 
-            ''' + t.name + ''' AS TableName,
-            ''' + c.name + ''' AS ColumnName,
-            CAST(' + QUOTENAME(c.name) + ' AS NVARCHAR(MAX)) AS Value
-        FROM ' + QUOTENAME(t.name) + '
-        WHERE CAST(' + QUOTENAME(c.name) + ' AS NVARCHAR(MAX)) LIKE @Param
-        UNION ALL
-    '
-    FROM sys.tables t
-    JOIN sys.columns c ON t.object_id = c.object_id
-    WHERE t.is_ms_shipped = 0
-      AND c.is_computed = 0
-      AND c.system_type_id IN (35, 99, 167, 175, 231, 239, 231, 104, 56, 52, 108, 106, 60, 61);
+    CREATE TABLE #Results (
+        TableName NVARCHAR(128),
+        RowJson NVARCHAR(MAX),
+        ColumnsJson NVARCHAR(MAX)  
+    );
 
-    -- הסרת UNION ALL האחרון בצורה בטוחה
-    IF LEN(@SQL) > 0
+    DECLARE @TableName NVARCHAR(128);
+    DECLARE @SQL NVARCHAR(MAX);
+    DECLARE @Where NVARCHAR(MAX);
+    DECLARE @Columns NVARCHAR(MAX);
+
+    DECLARE table_cursor CURSOR FOR
+    SELECT TABLE_NAME
+    FROM INFORMATION_SCHEMA.TABLES
+    WHERE TABLE_TYPE = 'BASE TABLE';
+
+    OPEN table_cursor;
+    FETCH NEXT FROM table_cursor INTO @TableName;
+
+    WHILE @@FETCH_STATUS = 0
     BEGIN
-        -- הסרת 10 התווים האחרונים ('UNION ALL' + רווח/שורה)
-        SET @SQL = LEFT(@SQL, LEN(@SQL) - LEN('
-        UNION ALL'));
+        SELECT @Where = STRING_AGG(
+            'CAST(' + QUOTENAME(COLUMN_NAME) + ' AS NVARCHAR(MAX)) LIKE ''%' + @SearchTerm + '%''',
+            ' OR '
+        )
+        FROM INFORMATION_SCHEMA.COLUMNS
+        WHERE TABLE_NAME = @TableName
+          AND DATA_TYPE IN ('nvarchar','varchar','char','nchar','text','ntext');
+
+        SELECT @Columns = (SELECT STRING_AGG(
+                                '{"ColumnName":"' + COLUMN_NAME + '","DataType":"' + DATA_TYPE + '"}',
+                                ','
+                            )
+                            FROM INFORMATION_SCHEMA.COLUMNS
+                            WHERE TABLE_NAME = @TableName);
+
+        IF @Where IS NOT NULL
+        BEGIN
+            SET @SQL = '
+                INSERT INTO #Results (TableName, RowJson, ColumnsJson)
+                SELECT ''' + @TableName + ''',
+                       (SELECT * FROM ' + QUOTENAME(@TableName) + '
+                        WHERE ' + @Where + '
+                        FOR JSON PATH, WITHOUT_ARRAY_WRAPPER),
+                       ''[' + @Columns + ']''
+            ';
+            EXEC sp_executesql @SQL;
+        END
+
+        FETCH NEXT FROM table_cursor INTO @TableName;
     END
 
-    -- הרצת השאילתא הדינמית עם פרמטר
-    IF LEN(@SQL) > 0
-        EXEC sp_executesql @SQL, N'@Param NVARCHAR(110)', @Param=@Param;
-END
+    CLOSE table_cursor;
+    DEALLOCATE table_cursor;
 
-go
-EXEC GlobalSearchAllTables @SearchTerm = 'Eli';
+    SELECT
+        TableName AS tableName,
+        JSON_QUERY('[' + STRING_AGG(RowJson, ',') + ']') AS rowData,
+        JSON_QUERY(ColumnsJson) AS columns   
+    FROM #Results
+    GROUP BY TableName, ColumnsJson
+    FOR JSON PATH;
+END
+GO
