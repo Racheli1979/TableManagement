@@ -24,7 +24,7 @@ export interface Table {
 export class TablesService {
   private apiUrl = 'http://localhost:5081/api/tables';
 
-  constructor(private http: HttpClient) {}
+  constructor(private http: HttpClient) { }
 
   getTables(): Observable<Table[]> {
     return this.http.get<Table[]>(this.apiUrl);
@@ -40,5 +40,9 @@ export class TablesService {
       columns,
       searchValue
     });
+  }
+
+  updateRecord(tableName: string, rowData: any) {
+    return this.http.post(`${this.apiUrl}/update-record`, { tableName, rowData });
   }
 }

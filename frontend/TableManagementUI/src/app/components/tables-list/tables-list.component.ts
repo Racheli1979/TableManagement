@@ -199,4 +199,29 @@ export class TablesListComponent implements OnInit, OnDestroy {
     this.selectedRecord = { ...record };
     this.selectedTableForEdit = table;
   }
+
+  saveEditedRecord(updatedRow: any) {
+    const table = this.selectedTableForEdit;
+    if (!table || !table.rowData) {
+      console.warn('No table or rowData available for update');
+      return;
+    }
+
+    // מחפשים את האינדקס רק אם rowData קיים
+    const index = table.rowData.findIndex(r => r?.ID === updatedRow.ID);
+
+    if (index > -1) {
+      table.rowData[index] = { ...updatedRow }; // עדכון הרשומה הקיימת
+    } else {
+      console.warn('Record ID not found in rowData');
+    }
+
+    this.tablesService.updateRecord(table.tableName, updatedRow).subscribe({
+      next: () => alert('Record updated successfully'),
+      error: (err: any) => {
+        console.error('Update failed:', err);
+        alert(err.error);
+      }
+    });
+  }
 }

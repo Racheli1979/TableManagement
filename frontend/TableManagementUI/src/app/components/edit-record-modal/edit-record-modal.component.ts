@@ -13,6 +13,8 @@ export class EditRecordModalComponent implements OnInit {
   @Output() close = new EventEmitter<void>();
   @Output() save = new EventEmitter<any>();
 
+  validationErrors: string[] = [];
+
   ngOnInit() {
     this.columns.forEach(col => {
       if (this.getInputType(col) === 'date' && this.row[col.columnName]) {
@@ -26,7 +28,37 @@ export class EditRecordModalComponent implements OnInit {
   }
 
   cancel() { this.close.emit(); }
-  saveRecord() { this.save.emit(this.row); this.close.emit(); }
+
+  saveRecord() {
+    this.validationErrors = [];
+    if (!this.validateRecord()) return;
+    this.save.emit(this.row);  // שולח ל-component ההורה
+    this.close.emit();
+  }
+
+  validateRecord(): boolean {
+    for (let col of this.columns) {
+      const value = this.row[col.columnName];
+
+      // חובה
+      if (col.isNullable === 'N' && (value === null || value === undefined || value === '')) {
+        this.validationErrors.push(`${col.columnName} is required`);
+      }
+
+      // סוגי עמודות
+      const type = col.dataType?.toLowerCase() || '';
+      if ((type.includes('int') || type.includes('number')) && isNaN(value)) {
+        this.validationErrors.push(`${col.columnName} must be a number`);
+      }
+      if (type.includes('date') && isNaN(Date.parse(value))) {
+        this.validationErrors.push(`${col.columnName} must be a valid date`);
+      }
+      if (type.includes('bit') && typeof value !== 'boolean') {
+        this.validationErrors.push(`${col.columnName} must be true/false`);
+      }
+    }
+    return this.validationErrors.length === 0;
+  }
 
   getInputType(col: Column): string {
     const type = col.dataType?.toLowerCase() || '';

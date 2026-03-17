@@ -14,6 +14,9 @@
           />
         </div>
       </form>
+      <div *ngIf="validationErrors.length" class="errors">
+        <div *ngFor="let err of validationErrors">{{ err }}</div>
+      </div>
     </div>
     <div class="modal-footer">
       <button (click)="cancel()">Cancel</button>

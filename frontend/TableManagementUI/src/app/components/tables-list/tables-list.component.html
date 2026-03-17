@@ -73,5 +73,6 @@
   [row]="selectedRecord"
   [columns]="selectedTableForEdit?.columns || []"
   [tableName]="selectedTableForEdit?.tableName || ''"
-  (close)="selectedRecord = null">
+  (close)="selectedRecord = null"
+  (save)="saveEditedRecord($event)">
 </app-edit-record-modal>
