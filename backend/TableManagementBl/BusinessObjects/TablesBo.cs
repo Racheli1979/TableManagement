@@ -18,11 +18,11 @@ namespace TableManagementBl.BusinessObjects
             _columnsDo = columnsDo;
         }
 
-        public async Task<List<TableMetadataDto>> GetAllTablesWithColumnsAsync()
+        public async Task<List<TableMetadataDto>> GetAllTables()
         {
-            var tables = (await _tablesDo.GetAllTablesAsync()).ToList();
+            var tables = (await _tablesDo.GetAllTables()).ToList();
 
-            var columns = (await _columnsDo.GetAllColumnsAsync()).ToList();
+            var columns = (await _columnsDo.GetAllColumns()).ToList();
 
             var tableDtos = tables
                 .Select(t => new TableMetadataDto
@@ -46,38 +46,12 @@ namespace TableManagementBl.BusinessObjects
             return tableDtos;
         }
 
-        public async Task<List<SearchResultDto>> GlobalSearch(string term)
+        public async Task<IEnumerable<dynamic>> SearchInTable(TableSearchRequestDto request)
         {
-            if (string.IsNullOrWhiteSpace(term))
-                return new List<SearchResultDto>();
+            if (string.IsNullOrEmpty(request.TableName) || string.IsNullOrEmpty(request.SearchValue))
+                return new List<dynamic>();
 
-            return await _tablesDo.GlobalSearch(term);
-        }
-
-        public async Task<IEnumerable<dynamic>> ColumnSearch(string tableName, List<string> columns, string searchValue)
-        {
-            if (string.IsNullOrWhiteSpace(tableName))
-                throw new ArgumentException("Table name is required");
-
-            if (columns == null || columns.Count == 0)
-                throw new ArgumentException("At least one column is required");
-
-            if (string.IsNullOrWhiteSpace(searchValue))
-                throw new ArgumentException("Search value is required");
-
-            if (searchValue.Length > 100)
-                throw new ArgumentException("Search value too long");
-
-            if (!Regex.IsMatch(tableName, @"^[a-zA-Z0-9_]+$"))
-                throw new ArgumentException($"Invalid table name: {tableName}");
-
-            foreach (var col in columns)
-            {
-                if (!Regex.IsMatch(col, @"^[a-zA-Z0-9_]+$"))
-                    throw new ArgumentException($"Invalid column name: {col}");
-            }
-
-            return await _tablesDo.ColumnSearch(tableName, columns, searchValue);
+            return await _tablesDo.SearchTable(request);
         }
     }
 }

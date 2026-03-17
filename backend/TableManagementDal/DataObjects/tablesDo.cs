@@ -18,7 +18,7 @@ namespace TableManagementDal.DataObjects
             _connectionString = connectionString;
         }
 
-        public async Task<IEnumerable<dynamic>> GetAllTablesAsync()
+        public async Task<IEnumerable<dynamic>> GetAllTables()
         {
             using var connection = new SqlConnection(_connectionString);
             await connection.OpenAsync();
@@ -29,60 +29,26 @@ namespace TableManagementDal.DataObjects
             );
         }
 
-        public async Task<List<SearchResultDto>> GlobalSearch(string searchTerm)
-        {
-            await using var connection = new SqlConnection(_connectionString);
-            await connection.OpenAsync();
-
-            var jsonChunks = await connection.QueryAsync<string>(
-                "GlobalSearchAllTables",
-                new { SearchTerm = searchTerm },
-                commandType: CommandType.StoredProcedure
-            );
-
-            var fullJson = string.Concat(jsonChunks);
-
-            if (string.IsNullOrWhiteSpace(fullJson))
-                return new List<SearchResultDto>();
-
-            var options = new JsonSerializerOptions
-            {
-                PropertyNameCaseInsensitive = true, 
-                NumberHandling = JsonNumberHandling.AllowReadingFromString
-            };
-
-            try 
-            {
-                return JsonSerializer.Deserialize<List<SearchResultDto>>(fullJson, options) 
-                    ?? new List<SearchResultDto>();
-            }
-            catch (JsonException ex)
-            {
-                throw new Exception($"Parsing failed. Content length: {fullJson.Length}", ex);
-            }
-        }
-        
-        public async Task<IEnumerable<dynamic>> ColumnSearch(
-            string tableName,
-            List<string> columns,
-            string searchValue)
+        public async Task<IEnumerable<dynamic>> SearchTable(TableSearchRequestDto request)
         {
             using var connection = new SqlConnection(_connectionString);
-
-            string columnsCsv = string.Join(",", columns);
-
+            
             var parameters = new DynamicParameters();
-            parameters.Add("@TableName", tableName, DbType.String);
-            parameters.Add("@Columns", columnsCsv, DbType.String);
-            parameters.Add("@SearchValue", searchValue, DbType.String);
+            parameters.Add("@TableName", request.TableName);
+            
+            // התיקון הקריטי:
+            // אם ColumnName הוא ריק, או מכיל את המילה "string" מה-Swagger, אנחנו הופכים אותו ל-NULL
+            string? colName = (string.IsNullOrWhiteSpace(request.ColumnName) || request.ColumnName == "string") 
+                            ? null : request.ColumnName;
+                            
+            parameters.Add("@ColumnName", colName);
+            parameters.Add("@SearchValue", request.SearchValue);
 
-            var result = await connection.QueryAsync(
-                "SearchTableColumns",
-                parameters,
+            return await connection.QueryAsync<dynamic>(
+                "SearchTableData", 
+                parameters, 
                 commandType: CommandType.StoredProcedure
             );
-
-            return result;
         }
     }
 }

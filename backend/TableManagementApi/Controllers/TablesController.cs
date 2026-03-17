@@ -21,38 +21,15 @@ namespace TableManagementApi.Controllers
         [HttpGet]
         public async Task<IActionResult> GetAllTables()
         {
-            List<TableMetadataDto> tableDtos = await _tablesBo.GetAllTablesWithColumnsAsync();
+            List<TableMetadataDto> tableDtos = await _tablesBo.GetAllTables();
             return Ok(tableDtos);
         }
 
-        [HttpGet("search")]
-        public async Task<IActionResult> GlobalSearch([FromQuery] string term)
+        [HttpPost("search")]
+        public async Task<IActionResult> Search([FromBody] TableSearchRequestDto request)
         {
-            var results = await _tablesBo.GlobalSearch(term);
+            var results = await _tablesBo.SearchInTable(request);
             return Ok(results);
-        }
-
-        [HttpPost("search-columns")]
-        public async Task<IActionResult> ColumnSearch([FromBody] ColumnSearchRequestDto request)
-        {
-            try
-            {
-                var results = await _tablesBo.ColumnSearch(
-                    request.TableName,
-                    request.Columns,
-                    request.SearchValue
-                );
-
-                return Ok(results);
-            }
-            catch (ArgumentException ex)
-            {
-                return BadRequest(ex.Message);
-            }
-            catch (SqlException ex)
-            {
-                return BadRequest(ex.Message);
-            }
-        }
+        }        
     }
 }

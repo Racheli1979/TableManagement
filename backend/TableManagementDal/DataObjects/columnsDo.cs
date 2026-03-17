@@ -15,7 +15,7 @@ namespace TableManagementDal.DataObjects
             _connectionString = connectionString;
         }
 
-        public async Task<IEnumerable<dynamic>> GetAllColumnsAsync()
+        public async Task<IEnumerable<dynamic>> GetAllColumns()
         {
             using var connection = new SqlConnection(_connectionString);
             await connection.OpenAsync();
