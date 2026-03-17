@@ -1,0 +1,70 @@
+<div class="app-container">
+  <aside class="sidebar">
+    <div class="sidebar-header">
+      <i class="database-icon"></i>
+      <span>בסיס נתונים (3)</span>
+    </div>
+
+    <div class="sidebar-search">
+      <input type="text" placeholder="סינון טבלאות לפי שם...">
+    </div>
+
+    <div class="audit-link" [class.active]="currentView === 'audit'">
+      <i class="clock-icon"></i>
+      <span>יומן פעולות (Audit Log)</span>
+    </div>
+
+    <div class="table-list-header">רשימת טבלאות (3)</div>
+    <ul class="table-list">
+      <li *ngFor="let t of tables" (click)="selectTable(t)" [class.active]="selectedTable?.TableName === t.TableName">
+        <i class="list-icon"></i> {{ t.TableName }}
+      </li>
+    </ul>
+  </aside>
+
+  <main class="main-content">
+    <div class="top-bar">
+      <button class="btn-add" (click)="openAddModal()">
+        <span class="plus-icon">+</span> הוספת רשומה חדשה
+      </button>
+      <h1 *ngIf="selectedTable">טבלת נתונים: {{ selectedTable.TableName }}</h1>
+    </div>
+
+    <div class="table-card">
+      <div class="global-search-container">
+        <input type="text" class="global-search-input" placeholder="חיפוש חופשי בכל השדות..."
+          [(ngModel)]="globalSearchTerm" (input)="onSearch(globalSearchTerm, null)">
+      </div>
+
+      <table class="data-table">
+        <thead>
+          <tr class="column-names">
+            <th class="actions-col">פעולות</th>
+            <th *ngFor="let col of selectedTable?.Columns">
+              {{ col.ColumnName }}
+              <div class="data-type-label">{{ col.DataType }}</div>
+            </th>
+          </tr>
+          <tr class="filter-row">
+            <th class="filter-icon-cell"><i class="filter-icon"></i></th>
+            <th *ngFor="let col of selectedTable?.Columns">
+              <input type="text" [placeholder]="'סנן לפי ' + col.ColumnName"
+                (input)="onSearch($any($event.target).value, col.ColumnName)">
+            </th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr *ngFor="let row of tableData">
+            <td class="actions-cell">
+              <button class="action-btn delete-btn" (click)="deleteRow(row)"><i class="trash-icon"></i></button>
+              <button class="action-btn edit-btn" (click)="openEditModal(row)"><i class="edit-icon"></i></button>
+            </td>
+            <td *ngFor="let col of selectedTable?.Columns">
+              {{ row[col.ColumnName] }}
+            </td>
+          </tr>
+        </tbody>
+      </table>
+    </div>
+  </main>
+</div>

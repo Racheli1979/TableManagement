@@ -2,43 +2,26 @@ import { Injectable } from '@angular/core';
 import { HttpClient } from '@angular/common/http';
 import { Observable } from 'rxjs';
 
-export interface Column {
-  columnName: string;
-  dataType: string;
-  isNullable: string;
-  maxLength: number | null;
-}
-
-export interface Table {
-  tableName: string;
-  schemaName: string;
-  objectType: string;
-  columns: Column[];
-  rowData?: any[];
-  expanded?: boolean;
-}
-
 @Injectable({
   providedIn: 'root'
 })
 export class TablesService {
   private apiUrl = 'http://localhost:5081/api/tables';
 
-  constructor(private http: HttpClient) {}
+  constructor(private http: HttpClient) { }
 
-  getTables(): Observable<Table[]> {
-    return this.http.get<Table[]>(this.apiUrl);
+  // שליפת מטא-דאטה של כל הטבלאות (US-1)
+  getTables(): Observable<any[]> {
+    return this.http.get<any[]>(this.apiUrl);
   }
 
-  getGlobalSearch(term: string): Observable<Table[]> {
-    return this.http.get<Table[]>(`${this.apiUrl}/search?term=${term}`);
-  }
-
-  searchColumns(tableName: string, columns: string[], searchValue: string): Observable<Table[]> {
-    return this.http.post<Table[]>(`${this.apiUrl}/search-columns`, {
-      tableName,
-      columns,
-      searchValue
-    });
+  // חיפוש מאוחד - גלובלי או לפי עמודה (US-2)
+  search(tableName: string, searchValue: string, columnName: string | null = null): Observable<any[]> {
+    const body = {
+      TableName: tableName,
+      ColumnName: columnName, // null עבור חיפוש גלובלי
+      SearchValue: searchValue
+    };
+    return this.http.post<any[]>(`${this.apiUrl}/search`, body);
   }
 }
