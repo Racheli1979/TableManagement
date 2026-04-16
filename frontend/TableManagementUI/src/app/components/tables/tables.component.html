@@ -1,70 +1,90 @@
-<div class="app-container">
+<div class="app-layout">
   <aside class="sidebar">
     <div class="sidebar-header">
-      <i class="database-icon"></i>
-      <span>בסיס נתונים (3)</span>
+      <span class="db-icon">🗄️</span>
+      <span class="header-text">בסיס נתונים ({{allTables.length}})</span>
     </div>
 
-    <div class="sidebar-search">
-      <input type="text" placeholder="סינון טבלאות לפי שם...">
+    <div class="search-box">
+      <input type="text" placeholder="סינון טבלאות לפי שם..." [(ngModel)]="searchTermTable"
+        (input)="onTableSearchInput()">
     </div>
 
-    <div class="audit-link" [class.active]="currentView === 'audit'">
-      <i class="clock-icon"></i>
-      <span>יומן פעולות (Audit Log)</span>
-    </div>
+    <nav class="sidebar-menu">
+      <div class="menu-item audit-log" [class.active]="showAuditLog" (click)="openAudit()">
+        <span class="icon">🕒</span>
+        <span class="title">יומן פעולות (Audit Log)</span>
+      </div>
 
-    <div class="table-list-header">רשימת טבלאות (3)</div>
-    <ul class="table-list">
-      <li *ngFor="let t of tables" (click)="selectTable(t)" [class.active]="selectedTable?.TableName === t.TableName">
-        <i class="list-icon"></i> {{ t.TableName }}
-      </li>
-    </ul>
+      <div class="menu-section-title">רשימת טבלאות</div>
+      <div class="table-list-container">
+        <div *ngFor="let table of filteredTables" class="menu-item table-link"
+          [class.active]="selectedTableForColumnSearch?.tableName === table.tableName" (click)="toggleTable(table)">
+          <span class="list-icon">≡</span>
+          {{ table.tableName }}
+        </div>
+      </div>
+    </nav>
   </aside>
 
   <main class="main-content">
-    <div class="top-bar">
-      <button class="btn-add" (click)="openAddModal()">
-        <span class="plus-icon">+</span> הוספת רשומה חדשה
-      </button>
-      <h1 *ngIf="selectedTable">טבלת נתונים: {{ selectedTable.TableName }}</h1>
-    </div>
+    <header class="content-header">
+      <h1 class="table-title" *ngIf="selectedTableForColumnSearch">
+        טבלת נתונים: {{ selectedTableForColumnSearch.tableName }}
 
-    <div class="table-card">
-      <div class="global-search-container">
-        <input type="text" class="global-search-input" placeholder="חיפוש חופשי בכל השדות..."
-          [(ngModel)]="globalSearchTerm" (input)="onSearch(globalSearchTerm, null)">
+        <span class="records-count">
+          ({{ getFilteredRows().length }} מתוך
+          {{ selectedTableForColumnSearch.rowData?.length || 0 }}
+          רשומות)
+        </span>
+      </h1>
+
+      <div class="empty-state" *ngIf="!selectedTableForColumnSearch">
+        <div class="empty-icon">📊</div>
+        <h2>בחר טבלה</h2>
+        <p>כדי להציג נתונים ולהתחיל לעבוד עם המערכת</p>
       </div>
 
-      <table class="data-table">
-        <thead>
-          <tr class="column-names">
-            <th class="actions-col">פעולות</th>
-            <th *ngFor="let col of selectedTable?.Columns">
-              {{ col.ColumnName }}
-              <div class="data-type-label">{{ col.DataType }}</div>
-            </th>
-          </tr>
-          <tr class="filter-row">
-            <th class="filter-icon-cell"><i class="filter-icon"></i></th>
-            <th *ngFor="let col of selectedTable?.Columns">
-              <input type="text" [placeholder]="'סנן לפי ' + col.ColumnName"
-                (input)="onSearch($any($event.target).value, col.ColumnName)">
-            </th>
-          </tr>
-        </thead>
-        <tbody>
-          <tr *ngFor="let row of tableData">
-            <td class="actions-cell">
-              <button class="action-btn delete-btn" (click)="deleteRow(row)"><i class="trash-icon"></i></button>
-              <button class="action-btn edit-btn" (click)="openEditModal(row)"><i class="edit-icon"></i></button>
-            </td>
-            <td *ngFor="let col of selectedTable?.Columns">
-              {{ row[col.ColumnName] }}
-            </td>
-          </tr>
-        </tbody>
-      </table>
+      <button class="btn-add-row" *ngIf="selectedTableForColumnSearch" (click)="openAddModal()">
+        + הוספת רשומה חדשה
+      </button>
+
+      <h1 class="table-title" *ngIf="showAuditLog">יומן פעולות (Audit Log)</h1>
+    </header>
+
+    <div class="table-card shadow" *ngIf="selectedTableForColumnSearch">
+      <!-- חיפוש גלובאלי -->
+      <div class="global-search-bar" *ngIf="selectedTableForColumnSearch">
+        <input type="text" placeholder="חיפוש מהיר בכל השדות..." [(ngModel)]="globalSearch" class="global-input" />
+      </div>
+
+      <div class="table-responsive">
+        <table class="data-table">
+          <thead>
+            <tr>
+
+              <th *ngFor="let col of selectedTableForColumnSearch.columns">
+                <div class="th-content">
+                  <span>{{ col.columnName }}</span>
+                  <input class="column-filter" [(ngModel)]="columnFilters[col.columnName]"
+                    [placeholder]="'סנן לפי ' + col.columnName + '...'" />
+                </div>
+              </th>
+              <th class="actions-col">פעולות</th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr *ngFor="let row of getFilteredRows()">
+              <td *ngFor="let col of selectedTableForColumnSearch.columns">
+                {{ row[col.columnName] || row[col.columnName.toUpperCase()] || row[col.columnName.toLowerCase()] }}
+              </td>
+              <td class="actions-cell">
+                <button class="btn-icon delete">🗑️</button>
+                <button class="btn-icon edit"
+                  (click)="selectedRecord = row; selectedTableForEdit = selectedTableForColumnSearch">✏️</button>
+              </td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
     </div>
-  </main>
-</div>

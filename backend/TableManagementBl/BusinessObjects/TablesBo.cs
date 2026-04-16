@@ -48,7 +48,7 @@ namespace TableManagementBl.BusinessObjects
 
         public async Task<IEnumerable<dynamic>> SearchInTable(TableSearchRequestDto request)
         {
-            if (string.IsNullOrEmpty(request.TableName) || string.IsNullOrEmpty(request.SearchValue))
+            if (string.IsNullOrEmpty(request.TableName))
                 return new List<dynamic>();
 
             return await _tablesDo.SearchTable(request);
