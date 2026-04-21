@@ -9,12 +9,15 @@ using System;
 var builder = WebApplication.CreateBuilder(args);
 
 Env.Load();
-
 string connectionString = Environment.GetEnvironmentVariable("DB_CONNECTION_STRING");
 
+if (string.IsNullOrEmpty(connectionString))
+{
+    throw new Exception("Critical: DB_CONNECTION_STRING is missing!");
+}
+
 // 🔹 Register DAL and BL
-builder.Services.AddScoped<tablesDo>(_ => new tablesDo(connectionString));
-builder.Services.AddScoped<columnsDo>(_ => new columnsDo(connectionString));   
+builder.Services.AddScoped<tablesDo>(_ => new tablesDo(connectionString));   
 builder.Services.AddScoped<TablesBo>();
 
 builder.Services.AddCors(options =>
@@ -25,7 +28,9 @@ builder.Services.AddCors(options =>
               .AllowAnyMethod());
 });
 
-builder.Services.AddControllers();
+builder.Services.AddControllers().AddJsonOptions(options => {
+    options.JsonSerializerOptions.PropertyNamingPolicy = null;
+});
 builder.Services.AddEndpointsApiExplorer();
 builder.Services.AddSwaggerGen();
 

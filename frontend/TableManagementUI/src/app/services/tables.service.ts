@@ -7,6 +7,8 @@ export interface Column {
   dataType: string;
   isNullable: string;
   maxLength: number | null;
+  isForeignKey: number;
+  relatedTable: string | null;
 }
 
 export interface Table {
@@ -24,21 +26,13 @@ export interface Table {
 export class TablesService {
   private apiUrl = 'http://localhost:5081/api/tables';
 
-  constructor(private http: HttpClient) {}
+  constructor(private http: HttpClient) { }
 
   getTables(): Observable<Table[]> {
     return this.http.get<Table[]>(this.apiUrl);
   }
 
-  getGlobalSearch(term: string): Observable<Table[]> {
-    return this.http.get<Table[]>(`${this.apiUrl}/search?term=${term}`);
-  }
-
-  searchColumns(tableName: string, columns: string[], searchValue: string): Observable<Table[]> {
-    return this.http.post<Table[]>(`${this.apiUrl}/search-columns`, {
-      tableName,
-      columns,
-      searchValue
-    });
+  searchInTable(request: any): Observable<any> {
+    return this.http.post<any>('http://localhost:5081/api/tables/search', request);
   }
 }

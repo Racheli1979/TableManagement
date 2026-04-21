@@ -21,38 +21,41 @@ namespace TableManagementApi.Controllers
         [HttpGet]
         public async Task<IActionResult> GetAllTables()
         {
-            List<TableMetadataDto> tableDtos = await _tablesBo.GetAllTablesWithColumnsAsync();
-            return Ok(tableDtos);
-        }
-
-        [HttpGet("search")]
-        public async Task<IActionResult> GlobalSearch([FromQuery] string term)
-        {
-            var results = await _tablesBo.GlobalSearch(term);
-            return Ok(results);
-        }
-
-        [HttpPost("search-columns")]
-        public async Task<IActionResult> ColumnSearch([FromBody] ColumnSearchRequestDto request)
-        {
             try
             {
-                var results = await _tablesBo.ColumnSearch(
-                    request.TableName,
-                    request.Columns,
-                    request.SearchValue
-                );
+                List<TableMetadataDto> tableDtos = await _tablesBo.GetAllTables();
+                return Ok(tableDtos);
+            }
+            catch (InvalidOperationException ex)
+            {
+                return NotFound(ex.Message);
+            }
+            catch (Exception ex)
+            {
+                return StatusCode(500, new { message = "שגיאה בשליפת מבנה הנתונים", details = ex.Message });
+            }
+        } 
 
-                return Ok(results);
+        [HttpPost("search")]
+        public async Task<IActionResult> Search([FromBody] TableSearchRequestDto request)
+        {
+            try 
+            {
+                var results = await _tablesBo.SearchInTable(request);
+                return Ok(results); 
+            }
+            catch (KeyNotFoundException ex)
+            {
+                return NotFound(ex.Message); 
             }
             catch (ArgumentException ex)
             {
-                return BadRequest(ex.Message);
+                return BadRequest(ex.Message); 
             }
-            catch (SqlException ex)
+            catch (Exception ex)
             {
-                return BadRequest(ex.Message);
+                return StatusCode(500, "קרתה שגיאה בשרת: " + ex.Message);
             }
-        }
+        }    
     }
 }
