@@ -11,7 +11,7 @@
     </div>
 
     <nav class="sidebar-menu">
-      <div class="menu-item audit-log" [class.active]="showAuditLog" (click)="openAudit()">
+      <div class="menu-item audit-log" [class.active]="showAuditLog">
         <span class="icon">🕒</span>
         <span class="title">יומן פעולות (Audit Log)</span>
       </div>
@@ -45,7 +45,7 @@
         <p>כדי להציג נתונים ולהתחיל לעבוד עם המערכת</p>
       </div>
 
-      <button class="btn-add-row" *ngIf="selectedTableForColumnSearch" (click)="openAddModal()">
+      <button class="btn-add-row" *ngIf="selectedTableForColumnSearch">
         + הוספת רשומה חדשה
       </button>
 
@@ -63,7 +63,7 @@
           <thead>
             <tr>
 
-              <th *ngFor="let col of selectedTableForColumnSearch.columns">
+              <th *ngFor="let col of getVisibleColumns()">
                 <div class="th-content">
                   <span>{{ col.columnName }}</span>
                   <input class="column-filter" [(ngModel)]="columnFilters[col.columnName]"
@@ -75,8 +75,23 @@
           </thead>
           <tbody>
             <tr *ngFor="let row of getFilteredRows()">
-              <td *ngFor="let col of selectedTableForColumnSearch.columns">
-                {{ row[col.columnName] || row[col.columnName.toUpperCase()] || row[col.columnName.toLowerCase()] }}
+              <td *ngFor="let col of getVisibleColumns()">
+                <ng-container *ngIf="col.dataType.toLowerCase().includes('date'); else notDate">
+                  {{ row[col.columnName] | date:'dd/MM/yyyy' }}
+                </ng-container>
+
+                <ng-template #notDate>
+                  <ng-container *ngIf="row[col.columnName + '_Display']; else regularValue">
+                    <span class="fk-container">
+                      <span class="fk-display"> ({{ row[col.columnName + '_Display'] }})</span>
+                      <span class="fk-id">{{ row[col.columnName] }}</span>
+                    </span>
+                  </ng-container>
+                </ng-template>
+                
+                <ng-template #regularValue>
+                  {{ row[col.columnName] }}
+                </ng-template>
               </td>
               <td class="actions-cell">
                 <button class="btn-icon delete">🗑️</button>
@@ -88,3 +103,7 @@
         </table>
       </div>
     </div>
+
+    <app-edit-record-modal *ngIf="selectedRecord" [table]="selectedTableForEdit" [record]="selectedRecord"
+      (close)="selectedRecord = null" (save)="handleSave($event)">
+    </app-edit-record-modal>

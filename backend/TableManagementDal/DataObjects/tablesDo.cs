@@ -36,8 +36,6 @@ namespace TableManagementDal.DataObjects
             var parameters = new DynamicParameters();
             parameters.Add("@TableName", request.TableName);
             
-            // התיקון הקריטי:
-            // אם ColumnName הוא ריק, או מכיל את המילה "string" מה-Swagger, אנחנו הופכים אותו ל-NULL
             string? colName = (string.IsNullOrWhiteSpace(request.ColumnName) || request.ColumnName == "string") 
                             ? null : request.ColumnName;
                             

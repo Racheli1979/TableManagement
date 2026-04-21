@@ -21,15 +21,41 @@ namespace TableManagementApi.Controllers
         [HttpGet]
         public async Task<IActionResult> GetAllTables()
         {
-            List<TableMetadataDto> tableDtos = await _tablesBo.GetAllTables();
-            return Ok(tableDtos);
-        }
+            try
+            {
+                List<TableMetadataDto> tableDtos = await _tablesBo.GetAllTables();
+                return Ok(tableDtos);
+            }
+            catch (InvalidOperationException ex)
+            {
+                return NotFound(ex.Message);
+            }
+            catch (Exception ex)
+            {
+                return StatusCode(500, new { message = "שגיאה בשליפת מבנה הנתונים", details = ex.Message });
+            }
+        } 
 
         [HttpPost("search")]
         public async Task<IActionResult> Search([FromBody] TableSearchRequestDto request)
         {
-            var results = await _tablesBo.SearchInTable(request);
-            return Ok(results);
-        }        
+            try 
+            {
+                var results = await _tablesBo.SearchInTable(request);
+                return Ok(results); 
+            }
+            catch (KeyNotFoundException ex)
+            {
+                return NotFound(ex.Message); 
+            }
+            catch (ArgumentException ex)
+            {
+                return BadRequest(ex.Message); 
+            }
+            catch (Exception ex)
+            {
+                return StatusCode(500, "קרתה שגיאה בשרת: " + ex.Message);
+            }
+        }    
     }
 }

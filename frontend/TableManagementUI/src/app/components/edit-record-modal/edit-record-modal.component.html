@@ -1,0 +1,77 @@
+<div class="modal-overlay" (click)="onClose()">
+    <div class="modal-container" (click)="$event.stopPropagation()">
+
+        <header class="modal-header">
+            <div class="header-content">
+                <span class="edit-icon">✏️</span>
+                <h2>עריכת רשומה - טבלת "{{ table?.tableName }}"</h2>
+            </div>
+        </header>
+
+        <main class="modal-body">
+            <form #editForm="ngForm">
+                <div class="fields-grid">
+                    <div class="form-item" *ngFor="let col of getEditableColumns()">
+                        <label [for]="col.columnName" class="field-label">{{ col.columnName }}</label>
+
+                        <div *ngIf="col.isForeignKey === 1" class="fk-container">
+                            <select [id]="col.columnName" [name]="col.columnName"
+                                [(ngModel)]="localRecord[col.columnName]" class="form-input fk-select">
+                                <option *ngFor="let item of lookups[col.columnName]" [value]="item.Id || item.id">
+                                    <span dir="ltr">
+                                        ({{ item.StatusName || item.Name || item.FirstName }}) {{ item.Id || item.id }}
+                                    </span>
+                                </option>
+                            </select>
+
+                            <div class="fk-info">
+                                <span class="fk-text">מפתח זר (FK): נבחר מזהה מתוך טבלת **{{ col.relatedTable
+                                    }}**</span>
+                                <span class="fk-link-icon">🔗</span>
+                            </div>
+                        </div>
+
+                        <div *ngIf="col.isForeignKey !== 1">
+                            <input [type]="getInputType(col.dataType)" [id]="col.columnName" [name]="col.columnName"
+                                [ngModel]="displayTransform(localRecord[col.columnName], col.dataType)"
+                                (ngModelChange)="localRecord[col.columnName] = saveTransform($event, col.dataType)"
+                                [readonly]="isReadOnly(col.columnName)" class="form-input"
+                                [placeholder]="'הזן ' + col.columnName">
+                        </div>
+                    </div>
+                </div>
+
+
+                <div class="audit-section">
+                    <div class="audit-title">
+                        <span class="icon">🕒</span>
+                        <h3>פרטי תיעוד (Audit)</h3>
+                    </div>
+                    <div class="audit-stack audit-grid">
+                        <div class="audit-item">
+                            <span class="audit-label">נוצר ע"י:</span>
+                            <div class="audit-details">
+                                <span class="audit-value">Admin</span>
+                                <span class="audit-date">14:05 17/03/2026</span>
+                            </div>
+                        </div>
+                        <div class="audit-item">
+                            <span class="audit-label">עודכן לאחרונה ע"י:</span>
+                            <div class="audit-details">
+                                <span class="audit-value">לא עודכן</span>
+                                <span class="audit-date">14:05 17/03/2026</span>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </form>
+        </main>
+
+        <footer class="modal-footer">
+            <button class="btn-cancel" (click)="onClose()">ביטול</button>
+            <button class="btn-save" (click)="onSave()">
+                <span>💾</span> שמור שינויים
+            </button>
+        </footer>
+    </div>
+</div>
