@@ -20,6 +20,14 @@ export interface Table {
   expanded?: boolean;
 }
 
+export interface UpdateRecordRequest {
+  tableName: string;
+  columnName: string;
+  newValue: string;
+  idValue: string;
+  updateUser: string;
+}
+
 @Injectable({
   providedIn: 'root'
 })
@@ -34,5 +42,9 @@ export class TablesService {
 
   searchInTable(request: any): Observable<any> {
     return this.http.post<any>('http://localhost:5081/api/tables/search', request);
+  }
+
+  updateRecord(request: UpdateRecordRequest): Observable<any> {
+    return this.http.post(`${this.apiUrl}/update`, request);
   }
 }
