@@ -62,8 +62,8 @@
 
   .form-item {
     display: grid;
-    grid-template-columns: 95px 1fr;
-    align-items: start; 
+    grid-template-columns: 110px 1fr; // הרחבה קלה כדי להכיל טקסט וכוכבית
+    align-items: start;
     column-gap: 12px;
     width: 100%;
     margin-bottom: 22px;
@@ -76,9 +76,18 @@
       font-weight: 600;
       font-size: 0.9rem;
       color: #4a5568;
-      text-align: left;
-      white-space: nowrap;
-      padding-top: 10px; 
+      text-align: right;
+      padding-top: 10px;
+      display: flex;
+      align-items: center;
+      justify-content: flex-end;
+      gap: 4px;
+
+      .required-star {
+        color: #ff4d4f;
+        font-weight: bold;
+        font-size: 1.1rem;
+      }
     }
 
     .form-input {
@@ -91,6 +100,27 @@
       font-size: 0.95rem;
       text-align: right;
       background-color: #fff;
+      transition: border-color 0.2s;
+
+      &.invalid-field {
+        border: 1.5px solid #ff4d4f !important;
+        background-color: #fff2f0 !important;
+      }
+    }
+
+    .error-message {
+      grid-column: 2; // הצמדת השגיאה לעמודה של האינפוט בלבד
+      color: #ff4d4f;
+      font-size: 11px;
+      margin-top: 4px;
+      font-weight: bold;
+      display: block;
+    }
+
+    .fk-container {
+      display: flex;
+      flex-direction: column;
+      width: 100%;
     }
 
     .fk-info {
@@ -182,17 +212,34 @@
     border-radius: 8px;
     font-weight: 700;
     cursor: pointer;
+    transition: all 0.2s;
   }
 
   .btn-save {
     background: #28a745;
     color: white;
     border: none;
+
+    &:disabled {
+      background-color: #d9d9d9;
+      color: #999;
+      cursor: not-allowed;
+      opacity: 0.8;
+      border: 1px solid #ccc;
+    }
+
+    &:not(:disabled):hover {
+      background: #218838;
+    }
   }
 
   .btn-cancel {
     background: #edf2f7;
     color: #4a5568;
     border: 1px solid #e2e8f0;
+
+    &:hover {
+      background: #e2e8f0;
+    }
   }
 }

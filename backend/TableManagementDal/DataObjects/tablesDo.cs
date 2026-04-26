@@ -48,5 +48,25 @@ namespace TableManagementDal.DataObjects
                 commandType: CommandType.StoredProcedure
             );
         }
+
+        public async Task<int> UpdateRecord(UpdateRecordRequestDto request)
+        {
+            using (var connection = new SqlConnection(_connectionString))
+            {
+                using (var command = new SqlCommand("UpdateRecord", connection))
+                {
+                    command.CommandType = CommandType.StoredProcedure;
+                    command.Parameters.AddWithValue("@TableName", request.TableName);
+                    command.Parameters.AddWithValue("@ColumnName", request.ColumnName);
+                    command.Parameters.AddWithValue("@NewValue", request.NewValue ?? (object)DBNull.Value);
+                    command.Parameters.AddWithValue("@IdValue", request.IdValue);
+                    command.Parameters.AddWithValue("@UpdateUser", request.UpdateUser);
+
+                    await connection.OpenAsync();
+                    int rowsAffected = await command.ExecuteNonQueryAsync();
+                    return rowsAffected;
+                }
+            }
+        }
     }
 }

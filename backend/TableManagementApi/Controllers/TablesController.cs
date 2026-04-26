@@ -56,6 +56,33 @@ namespace TableManagementApi.Controllers
             {
                 return StatusCode(500, "קרתה שגיאה בשרת: " + ex.Message);
             }
-        }    
+        }  
+
+        [HttpPost("update")]
+        public async Task<IActionResult> UpdateRecord([FromBody] UpdateRecordRequestDto request)
+        {
+            if (request == null)
+            {
+                return BadRequest(new { message = "נתוני בקשה ריקים" });
+            }
+
+            try
+            {
+                await _tablesBo.UpdateTableRecord(request);
+                return Ok(new { message = "הרשומה עודכנה בהצלחה" });
+            }
+            catch (ArgumentException ex) 
+            {
+                return BadRequest(new { message = ex.Message });
+            }
+            catch (KeyNotFoundException ex) 
+            {
+                return NotFound(new { message = ex.Message });
+            }
+            catch (Exception ex) 
+            {
+                return StatusCode(500, new { message = "שגיאת מערכת: " + ex.Message });
+            }
+        }  
     }
 }

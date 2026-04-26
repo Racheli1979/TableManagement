@@ -96,5 +96,48 @@ namespace TableManagementBl.BusinessObjects
 
             return await _tablesDo.SearchTable(request);
         }
+
+        public async Task UpdateTableRecord(UpdateRecordRequestDto request)
+        {
+            if (request == null || string.IsNullOrEmpty(request.TableName))
+                throw new ArgumentException("נתוני עדכון חסרים.");
+
+            string newValue = request.NewValue ?? "";
+            string upperValue = newValue.ToUpper().Trim();
+
+            string[] forbidden = { "DROP", "DELETE", "UPDATE", "SELECT", "TRUNCATE", "--" };
+            if (forbidden.Any(word => upperValue.Contains(word)))
+            {
+                throw new UnauthorizedAccessException("אבטחה: זוהה שימוש במילים אסורות!");
+            }
+
+            var allMetadata = await GetAllTables();
+            var table = allMetadata.FirstOrDefault(t => t.TableName.Equals(request.TableName, StringComparison.OrdinalIgnoreCase));
+            if (table == null) throw new KeyNotFoundException("הטבלה לא קיימת.");
+
+            var column = table.Columns.FirstOrDefault(c => c["ColumnName"].ToString().Equals(request.ColumnName, StringComparison.OrdinalIgnoreCase));
+            if (column == null) throw new KeyNotFoundException("העמודה לא קיימת.");
+
+            string colName = request.ColumnName.ToLower();
+            if (new[] { "name", "city", "country", "desc" }.Any(t => colName.Contains(t)) && !string.IsNullOrEmpty(newValue))
+            {
+                if (!System.Text.RegularExpressions.Regex.IsMatch(newValue, @"^[a-zA-Zא-ת\s'-]+$"))
+                    throw new ArgumentException("מותר להזין אותיות בלבד.");
+            }
+
+            string dataType = column["DataType"].ToString().ToUpper();
+            if ((new[] { "INT", "DECIMAL", "FLOAT", "NUMBER" }.Any(t => dataType.Contains(t))) && !string.IsNullOrEmpty(newValue))
+            {
+                if (!double.TryParse(newValue, out _))
+                    throw new ArgumentException("חובה להזין מספר תקין בעמודה זו.");
+            }
+
+            int rowsAffected = await _tablesDo.UpdateRecord(request);
+
+            if (rowsAffected == 0)
+            {
+                throw new KeyNotFoundException($"העדכון נכשל: לא נמצאה רשומה עם מזהה '{request.IdValue}' בטבלת {request.TableName}.");
+            }
+        }
     }
 }
