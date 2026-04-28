@@ -1,16 +1,16 @@
 import { ComponentFixture, TestBed } from '@angular/core/testing';
 
-import { EditRecordModalComponent } from './edit-record-modal.component';
+import { ManageRecordModalComponent } from './manage-record-modal.component';
 
 describe('EditRecordModalComponent', () => {
-  let component: EditRecordModalComponent;
-  let fixture: ComponentFixture<EditRecordModalComponent>;
+  let component: ManageRecordModalComponent;
+  let fixture: ComponentFixture<ManageRecordModalComponent>;
 
   beforeEach(() => {
     TestBed.configureTestingModule({
-      declarations: [EditRecordModalComponent]
+      declarations: [ManageRecordModalComponent]
     });
-    fixture = TestBed.createComponent(EditRecordModalComponent);
+    fixture = TestBed.createComponent(ManageRecordModalComponent);
     component = fixture.componentInstance;
     fixture.detectChanges();
   });

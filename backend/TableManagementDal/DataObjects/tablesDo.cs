@@ -4,8 +4,8 @@ using System.Data;
 using Microsoft.Data.SqlClient;
 using System.Threading.Tasks;
 using TableManagementContracts;
-using System.Text.Json;
-using System.Text.Json.Serialization;
+using System.Linq;
+using System;
 
 namespace TableManagementDal.DataObjects
 {
@@ -21,8 +21,6 @@ namespace TableManagementDal.DataObjects
         public async Task<IEnumerable<dynamic>> GetAllTables()
         {
             using var connection = new SqlConnection(_connectionString);
-            await connection.OpenAsync();
-
             return await connection.QueryAsync<dynamic>(
                 "GetAllUserTables",
                 commandType: CommandType.StoredProcedure
@@ -35,7 +33,7 @@ namespace TableManagementDal.DataObjects
             
             var parameters = new DynamicParameters();
             parameters.Add("@TableName", request.TableName);
-            
+
             string? colName = (string.IsNullOrWhiteSpace(request.ColumnName) || request.ColumnName == "string") 
                             ? null : request.ColumnName;
                             
@@ -49,24 +47,38 @@ namespace TableManagementDal.DataObjects
             );
         }
 
+        public async Task<int> AddTableRecord(string tableName, string jsonData, string user)
+        {
+            using var connection = new SqlConnection(_connectionString);
+            
+            var parameters = new DynamicParameters();
+            parameters.Add("@TableName", tableName);
+            parameters.Add("@JsonValues", jsonData);
+            parameters.Add("@UpdateUser", user);
+
+            return await connection.ExecuteAsync(
+                "AddNewRecord", 
+                parameters, 
+                commandType: CommandType.StoredProcedure
+            );
+        }
+
         public async Task<int> UpdateRecord(UpdateRecordRequestDto request)
         {
-            using (var connection = new SqlConnection(_connectionString))
-            {
-                using (var command = new SqlCommand("UpdateRecord", connection))
-                {
-                    command.CommandType = CommandType.StoredProcedure;
-                    command.Parameters.AddWithValue("@TableName", request.TableName);
-                    command.Parameters.AddWithValue("@ColumnName", request.ColumnName);
-                    command.Parameters.AddWithValue("@NewValue", request.NewValue ?? (object)DBNull.Value);
-                    command.Parameters.AddWithValue("@IdValue", request.IdValue);
-                    command.Parameters.AddWithValue("@UpdateUser", request.UpdateUser);
+            using var connection = new SqlConnection(_connectionString);
+            
+            var parameters = new DynamicParameters();
+            parameters.Add("@TableName", request.TableName);
+            parameters.Add("@ColumnName", request.ColumnName);
+            parameters.Add("@NewValue", request.NewValue ?? (object)DBNull.Value);
+            parameters.Add("@IdValue", request.IdValue);
+            parameters.Add("@UpdateUser", request.UpdateUser);
 
-                    await connection.OpenAsync();
-                    int rowsAffected = await command.ExecuteNonQueryAsync();
-                    return rowsAffected;
-                }
-            }
+            return await connection.ExecuteAsync(
+                "UpdateRecord", 
+                parameters, 
+                commandType: CommandType.StoredProcedure
+            );
         }
     }
 }

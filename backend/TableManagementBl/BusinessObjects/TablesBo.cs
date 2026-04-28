@@ -5,6 +5,7 @@ using System.Linq;
 using System.Threading.Tasks;
 using System;
 using Microsoft.Data.SqlClient;
+using System.Text.Json;
 
 namespace TableManagementBl.BusinessObjects
 {
@@ -28,7 +29,7 @@ namespace TableManagementBl.BusinessObjects
                     throw new InvalidOperationException("לא נמצאו טבלאות או עמודות בבסיס הנתונים.");
                 }
 
-                var tableDtos = rawData
+                return rawData
                     .GroupBy(r => new { 
                         TableName = r.TableName ?? "Unknown", 
                         SchemaName = r.SchemaName ?? "Unknown", 
@@ -50,8 +51,6 @@ namespace TableManagementBl.BusinessObjects
                         }).ToList()
                     })
                     .ToList();
-
-                return tableDtos;
             }
             catch (SqlException ex)
             {
@@ -102,15 +101,6 @@ namespace TableManagementBl.BusinessObjects
             if (request == null || string.IsNullOrEmpty(request.TableName))
                 throw new ArgumentException("נתוני עדכון חסרים.");
 
-            string newValue = request.NewValue ?? "";
-            string upperValue = newValue.ToUpper().Trim();
-
-            string[] forbidden = { "DROP", "DELETE", "UPDATE", "SELECT", "TRUNCATE", "--" };
-            if (forbidden.Any(word => upperValue.Contains(word)))
-            {
-                throw new UnauthorizedAccessException("אבטחה: זוהה שימוש במילים אסורות!");
-            }
-
             var allMetadata = await GetAllTables();
             var table = allMetadata.FirstOrDefault(t => t.TableName.Equals(request.TableName, StringComparison.OrdinalIgnoreCase));
             if (table == null) throw new KeyNotFoundException("הטבלה לא קיימת.");
@@ -118,25 +108,76 @@ namespace TableManagementBl.BusinessObjects
             var column = table.Columns.FirstOrDefault(c => c["ColumnName"].ToString().Equals(request.ColumnName, StringComparison.OrdinalIgnoreCase));
             if (column == null) throw new KeyNotFoundException("העמודה לא קיימת.");
 
-            string colName = request.ColumnName.ToLower();
-            if (new[] { "name", "city", "country", "desc" }.Any(t => colName.Contains(t)) && !string.IsNullOrEmpty(newValue))
-            {
-                if (!System.Text.RegularExpressions.Regex.IsMatch(newValue, @"^[a-zA-Zא-ת\s'-]+$"))
-                    throw new ArgumentException("מותר להזין אותיות בלבד.");
-            }
-
-            string dataType = column["DataType"].ToString().ToUpper();
-            if ((new[] { "INT", "DECIMAL", "FLOAT", "NUMBER" }.Any(t => dataType.Contains(t))) && !string.IsNullOrEmpty(newValue))
-            {
-                if (!double.TryParse(newValue, out _))
-                    throw new ArgumentException("חובה להזין מספר תקין בעמודה זו.");
-            }
+            ValidateFieldValue(request.ColumnName, request.NewValue, column["DataType"].ToString());
 
             int rowsAffected = await _tablesDo.UpdateRecord(request);
 
             if (rowsAffected == 0)
             {
                 throw new KeyNotFoundException($"העדכון נכשל: לא נמצאה רשומה עם מזהה '{request.IdValue}' בטבלת {request.TableName}.");
+            }
+        }
+
+        public async Task AddTableRecord(string tableName, Dictionary<string, object> record, string user)
+        {
+            if (string.IsNullOrEmpty(tableName) || record == null || !record.Any())
+                throw new ArgumentException("נתוני הוספה חסרים.");
+
+            var allMetadata = await GetAllTables();
+            var table = allMetadata.FirstOrDefault(t => t.TableName.Equals(tableName, StringComparison.OrdinalIgnoreCase));
+            
+            if (table == null) 
+                throw new KeyNotFoundException($"הטבלה '{tableName}' לא קיימת.");
+
+            foreach (var kvp in record)
+            {
+                var columnMetadata = table.Columns.FirstOrDefault(c => 
+                    c["ColumnName"]?.ToString()?.Equals(kvp.Key, StringComparison.OrdinalIgnoreCase) == true);
+                
+                if (columnMetadata != null)
+                {
+                    string dataType = columnMetadata["DataType"]?.ToString() ?? "NVARCHAR";
+                    ValidateFieldValue(kvp.Key, kvp.Value, dataType);
+                }
+            }
+
+            try
+            {
+                var jsonData = JsonSerializer.Serialize(record);
+                await _tablesDo.AddTableRecord(tableName, jsonData, user ?? "SystemUser");
+            }
+            catch (Exception ex)
+            {
+                if (ex.Message.Contains("Validation Error") || ex.Message.Contains("Security Violation"))
+                {
+                    throw new ArgumentException(ex.Message);
+                }
+                throw new Exception("שגיאה בתהליך שמירת הרשומה: " + ex.Message);
+            }
+        }
+
+        private void ValidateFieldValue(string columnName, object rawValue, string dataType)
+        {
+            string value = rawValue?.ToString() ?? "";
+            string upperValue = value.ToUpper().Trim();
+
+            string[] forbidden = { "DROP", "DELETE", "UPDATE", "SELECT", "TRUNCATE", "--" };
+            if (forbidden.Any(word => upperValue.Contains(word)))
+            {
+                throw new UnauthorizedAccessException($"אבטחה: ערך אסור זוהה בשדה '{columnName}'.");
+            }
+
+            string colLower = columnName.ToLower();
+            if (new[] { "name", "city", "country", "desc" }.Any(t => colLower.Contains(t)) && !string.IsNullOrEmpty(value))
+            {
+                if (!System.Text.RegularExpressions.Regex.IsMatch(value, @"^[a-zA-Zא-ת\s'-]+$"))
+                    throw new ArgumentException($"בשדה '{columnName}' מותר להזין אותיות בלבד.");
+            }
+
+            if (new[] { "INT", "DECIMAL", "FLOAT", "NUMBER" }.Any(t => dataType.ToUpper().Contains(t)) && !string.IsNullOrEmpty(value))
+            {
+                if (!double.TryParse(value, out _))
+                    throw new ArgumentException($"בשדה '{columnName}' חובה להזין מספר תקין.");
             }
         }
     }
