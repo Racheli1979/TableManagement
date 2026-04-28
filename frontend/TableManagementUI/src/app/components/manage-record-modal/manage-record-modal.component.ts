@@ -6,13 +6,14 @@ import { forkJoin, firstValueFrom } from 'rxjs';
 
 
 @Component({
-  selector: 'app-edit-record-modal',
-  templateUrl: './edit-record-modal.component.html',
-  styleUrls: ['./edit-record-modal.component.scss']
+  selector: 'app-manage-record-modal',
+  templateUrl: './manage-record-modal.component.html',
+  styleUrls: ['./manage-record-modal.component.scss']
 })
-export class EditRecordModalComponent implements OnInit {
+export class ManageRecordModalComponent implements OnInit {
   @Input() table: Table | null = null;
   @Input() record: any = {};
+  @Input() isNewRecord: boolean = false;
   localRecord: any;
   errors: { [key: string]: string } = {};
 
@@ -26,14 +27,23 @@ export class EditRecordModalComponent implements OnInit {
     if (Object.keys(this.errors).length > 0) return true;
 
     const columns = this.getEditableColumns();
+
     for (const col of columns) {
+      const value = this.localRecord[col.columnName];
+
       if (this.isRequired(col)) {
-        const value = this.localRecord[col.columnName];
-        if (value === null || value === undefined || String(value).trim() === '') {
+        if (value === null || value === undefined || String(value).trim() === '' || String(value) === 'null') {
+          return true;
+        }
+      }
+
+      if (col.isForeignKey === 1) {
+        if (value === null || value === undefined || value === '' || value === 'null') {
           return true;
         }
       }
     }
+
     return false;
   }
 
@@ -44,7 +54,11 @@ export class EditRecordModalComponent implements OnInit {
   constructor(private tablesService: TablesService) { }
 
   ngOnInit() {
-    this.localRecord = JSON.parse(JSON.stringify(this.record));
+    if (this.isNewRecord) {
+      this.localRecord = {};
+    } else {
+      this.localRecord = JSON.parse(JSON.stringify(this.record));
+    }
     this.loadLookups();
   }
 
@@ -97,13 +111,16 @@ export class EditRecordModalComponent implements OnInit {
   }
 
   isReadOnly(columnName: string): boolean {
-    const readonlyFields = ['Id', 'CREATE_DATE', 'CREATE_USER', 'UPDATE_DATE', 'UPDATE_USER'];
+    if (this.isNewRecord) {
+      return this.auditFields.includes(columnName);
+    }
+    const readonlyFields = ['Id', ...this.auditFields];
     return readonlyFields.includes(columnName);
   }
 
   getEditableColumns() {
     if (!this.table?.columns) return [];
-    const fieldsToHide = ['Id', 'CREATE_DATE', 'CREATE_USER', 'UPDATE_DATE', 'UPDATE_USER'];
+    const fieldsToHide = ['CREATE_DATE', 'CREATE_USER', 'UPDATE_DATE', 'UPDATE_USER'];
     return this.table.columns.filter(col => !fieldsToHide.includes(col.columnName));
   }
 
@@ -163,6 +180,11 @@ export class EditRecordModalComponent implements OnInit {
       this.errors[col.columnName] = 'ערך לא חוקי!';
       return;
     }
+
+    if (col.isForeignKey === 1 && (value === null || value === undefined)) {
+      this.errors[col.columnName] = 'חובה לבחור ערך מהרשימה';
+      return;
+    }
   }
 
   validateAll(): boolean {
@@ -179,42 +201,62 @@ export class EditRecordModalComponent implements OnInit {
     if (!this.validateAll()) return;
 
     const tableName = this.table?.tableName || '';
-    const idValue = String(this.localRecord['Id'] || this.localRecord['ID'] || this.localRecord['id']);
     const tempUser = 'System_Admin_Test';
 
-    const editableColumns = this.getEditableColumns();
+    if (this.isNewRecord) {
+      const addRequest = {
+        tableName: tableName,
+        recordData: this.localRecord,
+        updateUser: tempUser
+      };
 
-    const updateTasks = editableColumns
-      .filter(col => {
-        const newValue = this.localRecord[col.columnName];
-        const oldValue = this.record[col.columnName];
-        return newValue !== oldValue;
-      })
-      .map(col => {
-        const request = {
-          tableName: tableName,
-          columnName: col.columnName,
-          newValue: String(this.localRecord[col.columnName]),
-          idValue: idValue,
-          updateUser: tempUser
-        };
-        return this.tablesService.updateRecord(request);
-      });
+      try {
+        await firstValueFrom(this.tablesService.addRecord(addRequest));
+        this.save.emit(this.localRecord);
+        this.onClose();
+      } catch (err: any) {
+        console.error('Add Error:', err);
+        alert('שגיאה בהוספה: ' + (err.error?.message || 'הפעולה נכשלה, בדוק תקינות נתונים'));
+      }
 
-    if (updateTasks.length === 0) {
-      alert('לא בוצעו שינויים לשמירה.');
-      this.onClose();
-      return;
-    }
+    } else {
+      const idValue = String(this.localRecord['Id'] || this.localRecord['ID'] || this.localRecord['id']);
+      const editableColumns = this.getEditableColumns();
 
-    try {
-      await firstValueFrom(forkJoin(updateTasks));
-      this.save.emit(this.localRecord);
-      this.onClose();
+      const updateTasks = editableColumns
+        .filter(col => {
+          const newValue = this.localRecord[col.columnName];
+          const oldValue = this.record[col.columnName];
+          return newValue !== oldValue;
+        })
+        .map(col => {
+          const rawValue = this.localRecord[col.columnName];
+          const safeValue = (rawValue === null || rawValue === undefined) ? "" : String(rawValue);
 
-    } catch (err: any) {
-      console.error('Save failed:', err);
-      alert('שגיאה בשמירה: ' + (err.error?.message || 'אחד העדכונים נכשל'));
+          return {
+            tableName: tableName,
+            columnName: col.columnName,
+            newValue: safeValue,
+            idValue: idValue,
+            updateUser: tempUser
+          };
+        })
+        .map(req => this.tablesService.updateRecord(req));
+
+      if (updateTasks.length === 0) {
+        alert('לא בוצעו שינויים לשמירה.');
+        this.onClose();
+        return;
+      }
+
+      try {
+        await firstValueFrom(forkJoin(updateTasks));
+        this.save.emit(this.localRecord);
+        this.onClose();
+      } catch (err: any) {
+        console.error('Update Error:', err);
+        alert('שגיאה בשמירה: ' + (err.error?.message || 'אחד העדכונים נכשל בשרת'));
+      }
     }
   }
 }

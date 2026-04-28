@@ -47,4 +47,8 @@ export class TablesService {
   updateRecord(request: UpdateRecordRequest): Observable<any> {
     return this.http.post(`${this.apiUrl}/update`, request);
   }
+
+  addRecord(request: { tableName: string, recordData: any, updateUser: string }): Observable<any> {
+    return this.http.post(`${this.apiUrl}/add`, request);
+  }
 }

@@ -3,8 +3,11 @@
 
     <header class="modal-header">
       <div class="header-content">
-        <span class="edit-icon">✏️</span>
-        <h2>עריכת רשומה - טבלת "{{ table?.tableName }}"</h2>
+        <span class="edit-icon">{{ isNewRecord ? '➕' : '✏️' }}</span>
+        <h2>
+          {{ isNewRecord ? 'הוספת רשומה חדשה' : 'עריכת רשומה' }} -
+          טבלת "{{ table?.tableName }}"
+        </h2>
       </div>
     </header>
 
@@ -12,7 +15,7 @@
       <form #editForm="ngForm">
         <div class="fields-grid">
           <div class="form-item" *ngFor="let col of getEditableColumns()">
-            
+
             <label [for]="col.columnName" class="field-label">
               <span *ngIf="isRequired(col)" class="required-star">*</span>
               {{ col.columnName }}
@@ -20,14 +23,14 @@
 
             <div class="control-group">
               <div *ngIf="col.isForeignKey === 1" class="fk-container">
-                <select [id]="col.columnName" [name]="col.columnName"
-                  [(ngModel)]="localRecord[col.columnName]" 
-                  (change)="validateSingleField(col)"
-                  class="form-input fk-select"
+                <span *ngIf="isRequired(col)" class="required-star" style="color: red; margin-left: 4px;">*</span>
+                <select [id]="col.columnName" [name]="col.columnName" [(ngModel)]="localRecord[col.columnName]"
+                  (change)="validateSingleField(col)" class="form-input fk-select"
                   [class.invalid-field]="errors[col.columnName]">
+                  <option [ngValue]="undefined" disabled selected>בחר ערך...</option>
                   <option *ngFor="let item of lookups[col.columnName]" [value]="item.Id || item.id">
                     <span dir="ltr">
-                      ({{ item.StatusName || item.Name || item.FirstName }}) {{ item.Id || item.id }}
+                      ({{ item.StatusName || item.Name || item.FirstName || 'ללא תיאור' }}) {{ item.Id || item.id }}
                     </span>
                   </option>
                 </select>
@@ -38,15 +41,11 @@
               </div>
 
               <div *ngIf="col.isForeignKey !== 1">
-                <input [type]="getInputType(col.dataType)" 
-                  [id]="col.columnName" 
-                  [name]="col.columnName"
+                <input [type]="getInputType(col.dataType)" [id]="col.columnName" [name]="col.columnName"
                   [ngModel]="displayTransform(localRecord[col.columnName], col.dataType)"
                   (ngModelChange)="localRecord[col.columnName] = saveTransform($event, col.dataType); validateSingleField(col)"
-                  [maxlength]="col.maxLength ? col.maxLength + 1 : null"
-                  [readonly]="isReadOnly(col.columnName)" 
-                  class="form-input"
-                  [class.invalid-field]="errors[col.columnName]"
+                  [maxlength]="col.maxLength ? col.maxLength + 1 : null" [readonly]="isReadOnly(col.columnName)"
+                  class="form-input" [class.invalid-field]="errors[col.columnName]"
                   [placeholder]="'הזן ' + col.columnName">
               </div>
 
@@ -57,7 +56,7 @@
           </div>
         </div>
 
-        <div class="audit-section">
+        <div class="audit-section" *ngIf="!isNewRecord">
           <div class="audit-title">
             <span class="icon">🕒</span>
             <h3>פרטי תיעוד (Audit)</h3>
@@ -85,7 +84,8 @@
     <footer class="modal-footer">
       <button class="btn-cancel" (click)="onClose()">ביטול</button>
       <button class="btn-save" (click)="onSave()" [disabled]="hasValidationErrors">
-        <span>💾</span> שמור שינויים
+        <span>{{ isNewRecord ? '➕' : '💾' }}</span>
+        {{ isNewRecord ? 'הוסף רשומה חדשה' : 'שמור שינויים' }}
       </button>
     </footer>
   </div>

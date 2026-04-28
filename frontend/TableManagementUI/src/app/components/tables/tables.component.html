@@ -45,7 +45,7 @@
         <p>כדי להציג נתונים ולהתחיל לעבוד עם המערכת</p>
       </div>
 
-      <button class="btn-add-row" *ngIf="selectedTableForColumnSearch">
+      <button class="btn-add-row" *ngIf="selectedTableForColumnSearch" (click)="openAddModal()">
         + הוספת רשומה חדשה
       </button>
 
@@ -88,7 +88,7 @@
                     </span>
                   </ng-container>
                 </ng-template>
-                
+
                 <ng-template #regularValue>
                   {{ row[col.columnName] }}
                 </ng-template>
@@ -104,6 +104,7 @@
       </div>
     </div>
 
-    <app-edit-record-modal *ngIf="selectedRecord" [table]="selectedTableForEdit" [record]="selectedRecord"
-      (close)="selectedRecord = null" (save)="handleSave($event)">
-    </app-edit-record-modal>
+    <app-manage-record-modal *ngIf="selectedRecord !== null" [table]="selectedTableForEdit" [record]="selectedRecord"
+      [isNewRecord]="isNewRecordMode" (close)="selectedRecord = null; isNewRecordMode = false"
+      (save)="handleSave($event)">
+    </app-manage-record-modal>

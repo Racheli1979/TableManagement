@@ -26,6 +26,8 @@ export class TablesComponent implements OnInit, OnDestroy {
   private tableSearchSubject = new Subject<string>();
   private subscriptions: Subscription[] = [];
 
+  isNewRecordMode: boolean = false;
+
   constructor(private tablesService: TablesService) { }
 
   ngOnInit(): void {
@@ -61,7 +63,7 @@ export class TablesComponent implements OnInit, OnDestroy {
     this.tablesService.getTables().subscribe({
       next: (data: any[]) => {
         this.allTables = data.map(t => ({
-          tableName: t.tableName || t.TableName, 
+          tableName: t.tableName || t.TableName,
           schemaName: t.schemaName || t.SchemaName,
           objectType: t.objectType || t.ObjectType,
           columns: (t.columns || t.Columns || []).map((c: any) => ({
@@ -92,7 +94,7 @@ export class TablesComponent implements OnInit, OnDestroy {
     const request = {
       TableName: table.tableName,
       ColumnName: table.columns[0]?.columnName || '',
-      SearchValue: '' 
+      SearchValue: ''
     };
 
     this.tablesService.searchInTable(request)
@@ -128,7 +130,7 @@ export class TablesComponent implements OnInit, OnDestroy {
       rows = rows.filter(row => {
         return filterKeys.every(colName => {
           const filterValue = this.columnFilters[colName]?.toLowerCase();
-          if (!filterValue) return true; 
+          if (!filterValue) return true;
 
           const originalValue = row[colName]?.toString().toLowerCase() || '';
           const displayValue = row[colName + '_Display']?.toString().toLowerCase() || '';
@@ -151,9 +153,9 @@ export class TablesComponent implements OnInit, OnDestroy {
     );
   }
 
-  openEdit(row: any) {
-    this.selectedRecord = { ...row };
-    this.selectedTableForEdit = this.selectedTableForColumnSearch;
+  openEditModal(record: any) {
+    this.isNewRecordMode = false;
+    this.selectedRecord = { ...record };
   }
 
   handleSave(updatedData: any) {
@@ -162,11 +164,18 @@ export class TablesComponent implements OnInit, OnDestroy {
     if (this.selectedTableForEdit) {
       this.selectedRecord = null;
       alert('הפעולה בוצעה בהצלחה');
-      this.toggleTable(this.selectedTableForEdit); 
+      this.toggleTable(this.selectedTableForEdit);
     }
   }
 
   ngOnDestroy() {
     this.subscriptions.forEach(s => s.unsubscribe());
+  }
+
+  openAddModal() {
+    this.isNewRecordMode = true;
+    this.selectedTableForEdit = this.selectedTableForColumnSearch;
+    this.selectedRecord = {};
+    console.log('Table for add:', this.selectedTableForEdit);
   }
 }
