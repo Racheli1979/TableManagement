@@ -94,10 +94,10 @@
                 </ng-template>
               </td>
               <td class="actions-cell">
-                <button class="btn-icon delete">🗑️</button>
                 <button class="btn-icon edit"
                   (click)="selectedRecord = row; selectedTableForEdit = selectedTableForColumnSearch">✏️</button>
-              </td>
+                <button class="btn-icon delete" (click)="$event.stopPropagation(); onDelete(row)">🗑️</button>
+                </td>
             </tr>
           </tbody>
         </table>

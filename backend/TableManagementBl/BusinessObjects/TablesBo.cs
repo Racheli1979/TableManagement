@@ -180,5 +180,45 @@ namespace TableManagementBl.BusinessObjects
                     throw new ArgumentException($"בשדה '{columnName}' חובה להזין מספר תקין.");
             }
         }
+
+        public async Task DeleteTableRecord(string tableName, string id)
+        {
+            if (string.IsNullOrEmpty(tableName))
+                throw new ArgumentException("חובה לציין שם טבלה.");
+            
+            if (string.IsNullOrEmpty(id))
+                throw new ArgumentException("חובה לציין מזהה רשומה למחיקה.");
+
+            var allMetadata = await GetAllTables();
+            var tableExists = allMetadata.Any(t => t.TableName.Equals(tableName, StringComparison.OrdinalIgnoreCase));
+            
+            if (!tableExists)
+                throw new KeyNotFoundException($"הטבלה '{tableName}' לא נמצאה במערכת.");
+
+            try
+            {
+                int rowsAffected = await _tablesDo.DeleteRecord(tableName, id);
+
+                if (rowsAffected == 0)
+                {
+                    throw new KeyNotFoundException($"המחיקה נכשלה: לא נמצאה רשומה עם מזהה '{id}' בטבלת {tableName}.");
+                }
+            }
+            catch (SqlException ex)
+            {
+                if (ex.Number == 547 || ex.Number >= 50000) 
+                {
+                    throw new Exception(ex.Message); 
+                }
+                
+                throw new Exception("שגיאה בבסיס הנתונים בעת ניסיון המחיקה: " + ex.Message);
+            }
+            catch (Exception ex)
+            {
+                if (ex is KeyNotFoundException || ex is ArgumentException) throw;
+                
+                throw new Exception("קרתה שגיאה בלתי צפויה בתהליך המחיקה: " + ex.Message);
+            }
+        }
     }
 }
