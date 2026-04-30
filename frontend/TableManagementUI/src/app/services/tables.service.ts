@@ -51,4 +51,10 @@ export class TablesService {
   addRecord(request: { tableName: string, recordData: any, updateUser: string }): Observable<any> {
     return this.http.post(`${this.apiUrl}/add`, request);
   }
+
+  deleteRecord(tableName: string, id: string): Observable<any> {
+    return this.http.delete(`${this.apiUrl}/delete`, {
+      params: { tableName, id }
+    });
+  }
 }

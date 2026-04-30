@@ -8,7 +8,7 @@ using System;
 namespace TableManagementApi.Controllers
 {
     [ApiController]
-    [Route("api/[controller]")]
+    [Route("api/tables")]
     public class TablesController : ControllerBase
     {
         private readonly TablesBo _tablesBo;
@@ -113,6 +113,33 @@ namespace TableManagementApi.Controllers
             catch (Exception ex)
             {
                 return StatusCode(500, new { message = "שגיאה פנימית בהוספת רשומה", details = ex.Message });
+            }
+        }
+
+        [HttpDelete("delete")]
+        public async Task<IActionResult> DeleteRecord([FromQuery] string tableName, [FromQuery] string id)
+        {
+            if (string.IsNullOrEmpty(tableName) || string.IsNullOrEmpty(id))
+            {
+                return BadRequest(new { message = "שם טבלה ומזהה רשומה הם שדות חובה" });
+            }
+
+            try
+            {
+                await _tablesBo.DeleteTableRecord(tableName, id);
+                return Ok(new { message = "הרשומה נמחקה בהצלחה מהמערכת" });
+            }
+            catch (KeyNotFoundException ex)
+            {
+                return NotFound(new { message = ex.Message });
+            }
+            catch (ArgumentException ex)
+            {
+                return BadRequest(new { message = ex.Message });
+            }
+            catch (Exception ex)
+            {
+                return BadRequest(new { message = ex.Message });
             }
         }
     }

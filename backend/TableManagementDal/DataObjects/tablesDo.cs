@@ -80,5 +80,20 @@ namespace TableManagementDal.DataObjects
                 commandType: CommandType.StoredProcedure
             );
         }
+
+        public async Task<int> DeleteRecord(string tableName, string id)
+        {
+            using var connection = new SqlConnection(_connectionString);
+            
+            var parameters = new DynamicParameters();
+            parameters.Add("@TableName", tableName);
+            parameters.Add("@RecordId", id);
+
+            return await connection.ExecuteAsync(
+                "DeleteRecord", 
+                parameters, 
+                commandType: CommandType.StoredProcedure
+            );
+        }
     }
 }

@@ -178,4 +178,27 @@ export class TablesComponent implements OnInit, OnDestroy {
     this.selectedRecord = {};
     console.log('Table for add:', this.selectedTableForEdit);
   }
+
+  onDelete(row: any) {
+    const idValue = row.Id || row.id || row.ID;
+    if (!this.selectedTableForColumnSearch) return;
+
+    const tableName = this.selectedTableForColumnSearch.tableName;
+
+    if (confirm(`האם את בטוחה שברצונך למחוק את רשומה ${idValue}?`)) {
+      this.tablesService.deleteRecord(tableName, idValue.toString()).subscribe({
+        next: (res) => {
+          alert(res.message || 'הרשומה נמחקה בהצלחה');
+
+          if (this.selectedTableForColumnSearch) {
+            this.toggleTable(this.selectedTableForColumnSearch);
+          }
+        },
+        error: (err) => {
+          const errorMessage = err.error?.message || 'שגיאה במחיקה';
+          alert(errorMessage);
+        }
+      });
+    }
+  }
 }
