@@ -11,6 +11,7 @@ import { debounceTime, distinctUntilChanged } from 'rxjs/operators';
 export class TablesComponent implements OnInit, OnDestroy {
   allTables: Table[] = [];
   filteredTables: Table[] = [];
+  visibleColumns: Column[] = [];
   searchTermTable: string = '';
 
   showAuditLog: boolean = false;
@@ -91,6 +92,13 @@ export class TablesComponent implements OnInit, OnDestroy {
     this.showAuditLog = false;
     this.selectedTableForColumnSearch = table;
 
+    const auditFields = ['CREATE_USER', 'CREATE_DATE', 'UPDATE_USER', 'UPDATE_DATE'];
+    this.visibleColumns = [...table.columns].sort((a, b) => {
+      const isAAudit = auditFields.includes(a.columnName.toUpperCase());
+      const isBAudit = auditFields.includes(b.columnName.toUpperCase());
+      return (isAAudit ? 1 : 0) - (isBAudit ? 1 : 0);
+    });
+
     const request = {
       TableName: table.tableName,
       ColumnName: table.columns[0]?.columnName || '',
@@ -141,16 +149,6 @@ export class TablesComponent implements OnInit, OnDestroy {
     }
 
     return rows;
-  }
-
-  getVisibleColumns(): Column[] {
-    if (!this.selectedTableForColumnSearch || !this.selectedTableForColumnSearch.columns) {
-      return [];
-    }
-    const auditFields = ['CREATE_USER', 'CREATE_DATE', 'UPDATE_USER', 'UPDATE_DATE'];
-    return this.selectedTableForColumnSearch.columns.filter(col =>
-      !auditFields.includes(col.columnName.toUpperCase())
-    );
   }
 
   openEditModal(record: any) {

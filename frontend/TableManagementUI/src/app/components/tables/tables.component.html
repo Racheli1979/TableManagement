@@ -63,7 +63,7 @@
           <thead>
             <tr>
 
-              <th *ngFor="let col of getVisibleColumns()">
+              <th *ngFor="let col of visibleColumns">
                 <div class="th-content">
                   <span>{{ col.columnName }}</span>
                   <input class="column-filter" [(ngModel)]="columnFilters[col.columnName]"
@@ -75,7 +75,7 @@
           </thead>
           <tbody>
             <tr *ngFor="let row of getFilteredRows()">
-              <td *ngFor="let col of getVisibleColumns()">
+              <td *ngFor="let col of visibleColumns">
                 <ng-container *ngIf="col.dataType.toLowerCase().includes('date'); else notDate">
                   {{ row[col.columnName] | date:'dd/MM/yyyy' }}
                 </ng-container>
@@ -90,7 +90,7 @@
                 </ng-template>
 
                 <ng-template #regularValue>
-                  {{ row[col.columnName] }}
+                  {{ row[col.columnName] || '-' }}
                 </ng-template>
               </td>
               <td class="actions-cell">
