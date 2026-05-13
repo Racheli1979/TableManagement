@@ -97,14 +97,18 @@
                 <button class="btn-icon edit"
                   (click)="selectedRecord = row; selectedTableForEdit = selectedTableForColumnSearch">✏️</button>
                 <button class="btn-icon delete" (click)="$event.stopPropagation(); onDelete(row)">🗑️</button>
-                </td>
+              </td>
             </tr>
           </tbody>
         </table>
       </div>
     </div>
 
-    <app-manage-record-modal *ngIf="selectedRecord !== null" [table]="selectedTableForEdit" [record]="selectedRecord"
-      [isNewRecord]="isNewRecordMode" (close)="selectedRecord = null; isNewRecordMode = false"
-      (save)="handleSave($event)">
+    <app-manage-record-modal *ngIf="selectedRecord !== null" [table]="selectedTableForColumnSearch"
+      [record]="selectedRecord" [isNewRecord]="isNewRecordMode" (close)="selectedRecord = null"
+      (save)="handleDataFromManage($event)">
     </app-manage-record-modal>
+
+    <app-reason-modal *ngIf="showReasonModal" [data]="reasonModalData" (confirm)="finalizeAction($event)"
+      (cancel)="showReasonModal = false">
+    </app-reason-modal>

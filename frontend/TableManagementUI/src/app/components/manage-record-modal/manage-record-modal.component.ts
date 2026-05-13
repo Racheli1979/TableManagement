@@ -4,24 +4,30 @@ import { FormsModule } from '@angular/forms';
 import { Table, Column, TablesService } from '../../services/tables.service';
 import { forkJoin, firstValueFrom } from 'rxjs';
 
-
 @Component({
   selector: 'app-manage-record-modal',
   templateUrl: './manage-record-modal.component.html',
-  styleUrls: ['./manage-record-modal.component.scss']
+  styleUrls: ['./manage-record-modal.component.scss'],
 })
 export class ManageRecordModalComponent implements OnInit {
   @Input() table: Table | null = null;
   @Input() record: any = {};
-  @Input() isNewRecord: boolean = false;
+  @Input() isNewRecord: boolean = true;
   localRecord: any;
   errors: { [key: string]: string } = {};
 
   @Output() close = new EventEmitter<void>();
   @Output() save = new EventEmitter<any>();
 
-  readonly auditFields = ['CREATE_USER', 'CREATE_DATE', 'UPDATE_USER', 'UPDATE_DATE'];
+  readonly auditFields = [
+    'CREATE_USER',
+    'CREATE_DATE',
+    'UPDATE_USER',
+    'UPDATE_DATE',
+  ];
   lookups: { [key: string]: any[] } = {};
+  reason: string = '';
+  reasonError: string = '';
 
   get hasValidationErrors(): boolean {
     if (Object.keys(this.errors).length > 0) return true;
@@ -32,13 +38,23 @@ export class ManageRecordModalComponent implements OnInit {
       const value = this.localRecord[col.columnName];
 
       if (this.isRequired(col)) {
-        if (value === null || value === undefined || String(value).trim() === '' || String(value) === 'null') {
+        if (
+          value === null ||
+          value === undefined ||
+          String(value).trim() === '' ||
+          String(value) === 'null'
+        ) {
           return true;
         }
       }
 
       if (col.isForeignKey === 1) {
-        if (value === null || value === undefined || value === '' || value === 'null') {
+        if (
+          value === null ||
+          value === undefined ||
+          value === '' ||
+          value === 'null'
+        ) {
           return true;
         }
       }
@@ -51,13 +67,17 @@ export class ManageRecordModalComponent implements OnInit {
     const val = col.IsNullable || col.isNullable;
     return val === 'NO' || val === '0' || val === 0 || val === 'N';
   }
-  constructor(private tablesService: TablesService) { }
+  constructor(private tablesService: TablesService) {}
 
   ngOnInit() {
     if (this.isNewRecord) {
       this.localRecord = {};
     } else {
       this.localRecord = JSON.parse(JSON.stringify(this.record));
+
+      Object.keys(this.record).forEach((key) => {
+        this.localRecord[key + '_Original'] = this.record[key];
+      });
     }
     this.loadLookups();
   }
@@ -69,19 +89,20 @@ export class ManageRecordModalComponent implements OnInit {
   loadLookups() {
     if (!this.table) return;
 
-    this.table.columns.forEach(col => {
+    this.table.columns.forEach((col) => {
       if (col.isForeignKey === 1 && col.relatedTable) {
         const request = {
           TableName: col.relatedTable,
           ColumnName: null,
-          SearchValue: null
+          SearchValue: null,
         };
 
         this.tablesService.searchInTable(request).subscribe({
           next: (data: any) => {
             this.lookups[col.columnName] = data;
           },
-          error: (err) => console.error(`Error loading lookup for ${col.relatedTable}:`, err)
+          error: (err) =>
+            console.error(`Error loading lookup for ${col.relatedTable}:`, err),
         });
       }
     });
@@ -90,14 +111,21 @@ export class ManageRecordModalComponent implements OnInit {
   getInputType(dataType: string): string {
     const type = dataType?.toLowerCase() || '';
     if (type.includes('date')) return 'date';
-    if (type === 'int' || type === 'decimal' || type === 'float') return 'number';
+    if (type === 'int' || type === 'decimal' || type === 'float')
+      return 'number';
     return 'text';
   }
 
   displayTransform(value: any, dataType: string): any {
-    if (!value) return '';
+    if (
+      value === null ||
+      value === undefined ||
+      String(value).toLowerCase() === 'null'
+    ) {
+      return ''; 
+    }
     const type = dataType?.toLowerCase() || '';
-    if (type.includes('date')) {
+    if (type.includes('date') && value) {
       return value.toString().split('T')[0];
     }
     return value;
@@ -106,7 +134,8 @@ export class ManageRecordModalComponent implements OnInit {
   saveTransform(newValue: any, dataType: string): any {
     const type = dataType?.toLowerCase() || '';
     if (type === 'int') return parseInt(newValue) || 0;
-    if (type === 'decimal' || type === 'float') return parseFloat(newValue) || 0;
+    if (type === 'decimal' || type === 'float')
+      return parseFloat(newValue) || 0;
     return newValue;
   }
 
@@ -120,8 +149,15 @@ export class ManageRecordModalComponent implements OnInit {
 
   getEditableColumns() {
     if (!this.table?.columns) return [];
-    const fieldsToHide = ['CREATE_DATE', 'CREATE_USER', 'UPDATE_DATE', 'UPDATE_USER'];
-    return this.table.columns.filter(col => !fieldsToHide.includes(col.columnName));
+    const fieldsToHide = [
+      'CREATE_DATE',
+      'CREATE_USER',
+      'UPDATE_DATE',
+      'UPDATE_USER',
+    ];
+    return this.table.columns.filter(
+      (col) => !fieldsToHide.includes(col.columnName),
+    );
   }
 
   clearError(columnName: string) {
@@ -132,7 +168,8 @@ export class ManageRecordModalComponent implements OnInit {
 
   validateSingleField(col: any) {
     const value = this.localRecord[col.columnName];
-    const stringValue = (value !== null && value !== undefined) ? String(value).trim() : '';
+    const stringValue =
+      value !== null && value !== undefined ? String(value).trim() : '';
     const dataType = col.dataType?.toLowerCase() || '';
 
     const colName = col.columnName.toLowerCase();
@@ -144,7 +181,13 @@ export class ManageRecordModalComponent implements OnInit {
       return;
     }
 
-    const isPureTextTemplate = ['name', 'city', 'country', 'desc'].some(t => colName.includes(t));
+    if (stringValue === '' || stringValue === 'null') {
+      return;
+    }
+
+    const isPureTextTemplate = ['name', 'city', 'country', 'desc'].some((t) =>
+      colName.includes(t),
+    );
 
     if (isPureTextTemplate && stringValue !== '') {
       const alphaPattern = /^[a-zA-Zא-ת\s'-]+$/;
@@ -154,7 +197,9 @@ export class ManageRecordModalComponent implements OnInit {
       }
     }
 
-    const isNumericTemplate = ['int', 'decimal', 'float', 'number', 'bit'].some(t => dataType.includes(t));
+    const isNumericTemplate = ['int', 'decimal', 'float', 'number', 'bit'].some(
+      (t) => dataType.includes(t),
+    );
 
     if (isNumericTemplate && stringValue !== '') {
       if (isNaN(Number(stringValue))) {
@@ -171,12 +216,17 @@ export class ManageRecordModalComponent implements OnInit {
       }
     }
 
-    if (col.maxLength && col.maxLength > 0 && stringValue.length > col.maxLength) {
-      this.errors[col.columnName] = `הכנס ${col.columnName} באורך עד ${col.maxLength} תווים`;
+    if (
+      col.maxLength &&
+      col.maxLength > 0 &&
+      stringValue.length > col.maxLength
+    ) {
+      this.errors[col.columnName] =
+        `הכנס ${col.columnName} באורך עד ${col.maxLength} תווים`;
     }
 
     const forbidden = ['DROP', 'DELETE', 'UPDATE', 'SELECT', 'TRUNCATE', '--'];
-    if (forbidden.some(word => stringValue.toUpperCase().includes(word))) {
+    if (forbidden.some((word) => stringValue.toUpperCase().includes(word))) {
       this.errors[col.columnName] = 'ערך לא חוקי!';
       return;
     }
@@ -190,73 +240,23 @@ export class ManageRecordModalComponent implements OnInit {
   validateAll(): boolean {
     const columns = this.getEditableColumns();
 
-    columns.forEach(col => {
+    columns.forEach((col) => {
       this.validateSingleField(col);
     });
 
     return Object.keys(this.errors).length === 0;
   }
 
+  validateReason() {
+    if (!this.reason || this.reason.trim().length < 5) {
+      this.reasonError = 'חובה להזין סיבה באורך 5 תווים לפחות';
+    } else {
+      this.reasonError = '';
+    }
+  }
+
   async onSave() {
     if (!this.validateAll()) return;
-
-    const tableName = this.table?.tableName || '';
-    const tempUser = 'System_Admin_Test';
-
-    if (this.isNewRecord) {
-      const addRequest = {
-        tableName: tableName,
-        recordData: this.localRecord,
-        updateUser: tempUser
-      };
-
-      try {
-        await firstValueFrom(this.tablesService.addRecord(addRequest));
-        this.save.emit(this.localRecord);
-        this.onClose();
-      } catch (err: any) {
-        console.error('Add Error:', err);
-        alert('שגיאה בהוספה: ' + (err.error?.message || 'הפעולה נכשלה, בדוק תקינות נתונים'));
-      }
-
-    } else {
-      const idValue = String(this.localRecord['Id'] || this.localRecord['ID'] || this.localRecord['id']);
-      const editableColumns = this.getEditableColumns();
-
-      const updateTasks = editableColumns
-        .filter(col => {
-          const newValue = this.localRecord[col.columnName];
-          const oldValue = this.record[col.columnName];
-          return newValue !== oldValue;
-        })
-        .map(col => {
-          const rawValue = this.localRecord[col.columnName];
-          const safeValue = (rawValue === null || rawValue === undefined) ? "" : String(rawValue);
-
-          return {
-            tableName: tableName,
-            columnName: col.columnName,
-            newValue: safeValue,
-            idValue: idValue,
-            updateUser: tempUser
-          };
-        })
-        .map(req => this.tablesService.updateRecord(req));
-
-      if (updateTasks.length === 0) {
-        alert('לא בוצעו שינויים לשמירה.');
-        this.onClose();
-        return;
-      }
-
-      try {
-        await firstValueFrom(forkJoin(updateTasks));
-        this.save.emit(this.localRecord);
-        this.onClose();
-      } catch (err: any) {
-        console.error('Update Error:', err);
-        alert('שגיאה בשמירה: ' + (err.error?.message || 'אחד העדכונים נכשל בשרת'));
-      }
-    }
+    this.save.emit(this.localRecord);
   }
 }

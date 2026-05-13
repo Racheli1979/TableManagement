@@ -1,0 +1,37 @@
+<div class="modal-overlay">
+  <div class="modal-container">
+    
+    <div class="modal-header">
+      <div class="header-content">
+        <h3 class="modal-title">{{data.title}}</h3>
+        <span class="v-icon">✓</span>
+      </div>
+    </div>
+    
+    <div class="header-divider"></div>
+
+    <div class="modal-body">
+      <p class="instruction-text">{{data.description}}</p>
+      
+      <div class="input-wrapper">
+        <label>סיבת השינוי (מינימום {{data.minLength}} תווים)</label>
+        <textarea 
+          [(ngModel)]="reasonText" 
+          rows="4">
+        </textarea>
+      </div>
+    </div>
+
+    <div class="modal-footer">
+      <button class="btn-cancel" (click)="onCancel()">ביטול</button>
+      <button 
+        class="btn-confirm" 
+        [disabled]="reasonText.trim().length < (data.minLength || 5)" 
+        (click)="onConfirm()">
+        <span class="save-icon">💾</span>
+        <span>{{data.actionName}}</span>
+      </button>
+    </div>
+    
+  </div>
+</div>

@@ -21,11 +21,18 @@ export interface Table {
 }
 
 export interface UpdateRecordRequest {
+  TableName: string;
+  UpdatedData: { [key: string]: any };
+  IdValue: string;
+  UpdateUser: string;
+  Reason: string;
+}
+
+export interface DeleteRecordRequest {
   tableName: string;
-  columnName: string;
-  newValue: string;
-  idValue: string;
+  id: string;
   updateUser: string;
+  reason: string;
 }
 
 @Injectable({
@@ -48,13 +55,11 @@ export class TablesService {
     return this.http.post(`${this.apiUrl}/update`, request);
   }
 
-  addRecord(request: { tableName: string, recordData: any, updateUser: string }): Observable<any> {
+  addRecord(request: { tableName: string, recordData: any, updateUser: string, reason: string }): Observable<any> {
     return this.http.post(`${this.apiUrl}/add`, request);
   }
 
-  deleteRecord(tableName: string, id: string): Observable<any> {
-    return this.http.delete(`${this.apiUrl}/delete`, {
-      params: { tableName, id }
-    });
+  deleteRecord(request: DeleteRecordRequest): Observable<any> {
+    return this.http.post(`${this.apiUrl}/delete`, request);
   }
 }

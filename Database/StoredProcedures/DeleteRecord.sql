@@ -1,12 +1,17 @@
 GO
-CREATE PROCEDURE DeleteRecord
+CREATE OR ALTER PROCEDURE DeleteRecord
     @TableName NVARCHAR(128),
-    @RecordId NVARCHAR(450)
+    @RecordId NVARCHAR(450),
+    @UpdateUser NVARCHAR(128), 
+    @Reason NVARCHAR(MAX)      
 AS
 BEGIN
     SET NOCOUNT ON;
     DECLARE @Sql NVARCHAR(MAX);
     DECLARE @PKColumnName NVARCHAR(128);
+    DECLARE @OldData NVARCHAR(MAX); 
+
+    EXEC ValidateColumnData @TableName = 'AuditLog', @ColumnName = 'Reason', @Value = @Reason;
 
     BEGIN TRY
         IF NOT EXISTS (SELECT 1 FROM INFORMATION_SCHEMA.TABLES WHERE TABLE_NAME = @TableName)
@@ -21,6 +26,10 @@ BEGIN
         INNER JOIN sys.columns c ON ic.object_id = c.object_id AND ic.column_id = c.column_id
         WHERE i.is_primary_key = 1 AND OBJECT_NAME(i.object_id) = @TableName;
 
+        SET @Sql = N'SET @Result = (SELECT * FROM ' + QUOTENAME(@TableName) + 
+                   N' WHERE ' + QUOTENAME(@PKColumnName) + ' = @Id FOR JSON PATH, WITHOUT_ARRAY_WRAPPER)';
+        EXEC sp_executesql @Sql, N'@Id NVARCHAR(450), @Result NVARCHAR(MAX) OUTPUT', @Id = @RecordId, @Result = @OldData OUTPUT;
+
         SET @Sql = 'DELETE FROM ' + QUOTENAME(@TableName) + 
                    ' WHERE ' + QUOTENAME(@PKColumnName) + ' = @Id';
 
@@ -29,6 +38,30 @@ BEGIN
         IF @@ROWCOUNT = 0
         BEGIN
             RAISERROR('Record not found or already deleted.', 16, 1);
+        END
+        ELSE
+        BEGIN
+
+            INSERT INTO AuditLog (
+                TableName, 
+                RecordId, 
+                Action, 
+                UserName, 
+                ChangeDate, 
+                Reason, 
+                OldValues, 
+                NewValues
+            )
+            VALUES (
+                @TableName, 
+                @RecordId, 
+                'DELETE', 
+                @UpdateUser, 
+                GETDATE(), 
+                @Reason, 
+                @OldData, 
+                NULL
+            );
         END
         
     END TRY
@@ -44,3 +77,4 @@ BEGIN
         END
     END CATCH
 END
+GO

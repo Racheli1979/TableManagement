@@ -1,28 +1,58 @@
 GO
-CREATE PROCEDURE UpdateRecord
+ALTER PROCEDURE UpdateRecord
     @TableName NVARCHAR(128),
-    @ColumnName NVARCHAR(128),
-    @NewValue NVARCHAR(MAX),
     @IdValue NVARCHAR(MAX), 
-    @UpdateUser NVARCHAR(128)
+    @NewDataJson NVARCHAR(MAX), -- מקבל אובייקט JSON עם כל השדות ששונו
+    @UpdateUser NVARCHAR(128),
+    @Reason NVARCHAR(MAX) 
 AS
 BEGIN
     SET NOCOUNT ON;
 
-    EXEC ValidateColumnData @TableName, @ColumnName, @NewValue;
+    -- 1. ואלידציה לסיבת השינוי (כמו במקור שלך)
+    EXEC ValidateColumnData @TableName = 'AuditLog', @ColumnName = 'Reason', @Value = @Reason;
+
+    -- 2. לולאת ואלידציה על כל העמודות שהגיעו ב-JSON
+    -- אנחנו עוברים על ה-JSON ובודקים כל עמודה וערך מול ה-ValidateColumnData שלך
+    DECLARE @ColName NVARCHAR(128);
+    DECLARE @ColVal NVARCHAR(MAX);
+
+    DECLARE val_cursor CURSOR FOR 
+    SELECT [key], [value] FROM OPENJSON(@NewDataJson);
+
+    OPEN val_cursor;
+    FETCH NEXT FROM val_cursor INTO @ColName, @ColVal;
+    WHILE @@FETCH_STATUS = 0
+    BEGIN
+        -- הפעלת האבטחה המקורית שלך על כל עמודה בנפרד
+        EXEC ValidateColumnData @TableName, @ColName, @ColVal;
+        FETCH NEXT FROM val_cursor INTO @ColName, @ColVal;
+    END
+    CLOSE val_cursor;
+    DEALLOCATE val_cursor;
 
     DECLARE @SQL NVARCHAR(MAX);
-    
-    SET @SQL = N'UPDATE ' + QUOTENAME(@TableName) + 
-               N' SET ' + QUOTENAME(@ColumnName) + N' = @Val, 
-                    UPDATE_USER = @User, 
-                    UPDATE_DATE = GETDATE() 
-                  WHERE CAST(Id AS NVARCHAR(MAX)) = @Id';
+    DECLARE @OldValues NVARCHAR(MAX); 
+    DECLARE @NewValues NVARCHAR(MAX); 
+    DECLARE @UpdateSetClause NVARCHAR(MAX);
 
     BEGIN TRY
+        SET @SQL = N'SELECT @Old = (SELECT * FROM ' + QUOTENAME(@TableName) + 
+                   N' WHERE CAST(Id AS NVARCHAR(MAX)) = @Id FOR JSON PATH, WITHOUT_ARRAY_WRAPPER)';
+        EXEC sp_executesql @SQL, N'@Id NVARCHAR(MAX), @Old NVARCHAR(MAX) OUTPUT', @Id = @IdValue, @Old = @OldValues OUTPUT;
+
+        SELECT @UpdateSetClause = STRING_AGG(QUOTENAME([key]) + ' = JSON_VALUE(@Json, ''$.'' + ' + QUOTENAME([key], '''') + ')', ', ')
+        FROM OPENJSON(@NewDataJson);
+
+        SET @SQL = N'UPDATE ' + QUOTENAME(@TableName) + 
+                   N' SET ' + @UpdateSetClause + N', 
+                        UPDATE_USER = @User, 
+                        UPDATE_DATE = GETDATE() 
+                      WHERE CAST(Id AS NVARCHAR(MAX)) = @Id';
+
         EXEC sp_executesql @SQL, 
-             N'@Val NVARCHAR(MAX), @User NVARCHAR(128), @Id NVARCHAR(MAX)', 
-             @Val = @NewValue, 
+             N'@Json NVARCHAR(MAX), @User NVARCHAR(128), @Id NVARCHAR(MAX)', 
+             @Json = @NewDataJson, 
              @User = @UpdateUser, 
              @Id = @IdValue;
 
@@ -30,8 +60,21 @@ BEGIN
         BEGIN
             RAISERROR('Execution Error: No record found with the provided ID.', 16, 1);
         END
+
+        SET @SQL = N'SELECT @New = (SELECT * FROM ' + QUOTENAME(@TableName) + 
+                   N' WHERE CAST(Id AS NVARCHAR(MAX)) = @Id FOR JSON PATH, WITHOUT_ARRAY_WRAPPER)';
+        EXEC sp_executesql @SQL, N'@Id NVARCHAR(MAX), @New NVARCHAR(MAX) OUTPUT', @Id = @IdValue, @New = @NewValues OUTPUT;
+
+        INSERT INTO AuditLog (
+            TableName, RecordId, Action, UserName, ChangeDate, Reason, OldValues, NewValues
+        )
+        VALUES (
+            @TableName, @IdValue, 'UPDATE', @UpdateUser, GETDATE(), @Reason, @OldValues, @NewValues
+        );
+
     END TRY
     BEGIN CATCH
-        THROW; 
+        IF CURSOR_STATUS('global','val_cursor') >= 0 BEGIN CLOSE val_cursor; DEALLOCATE val_cursor; END
+        ;THROW; 
     END CATCH
 END

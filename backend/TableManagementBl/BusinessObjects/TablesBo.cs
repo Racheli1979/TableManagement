@@ -98,17 +98,26 @@ namespace TableManagementBl.BusinessObjects
 
         public async Task UpdateTableRecord(UpdateRecordRequestDto request)
         {
-            if (request == null || string.IsNullOrEmpty(request.TableName))
-                throw new ArgumentException("נתוני עדכון חסרים.");
+            if (request == null || string.IsNullOrEmpty(request.TableName) || request.UpdatedData == null || !request.UpdatedData.Any())
+                throw new ArgumentException("נתוני עדכון חסרים או שלא נבחרו שדות לשינוי.");
 
             var allMetadata = await GetAllTables();
             var table = allMetadata.FirstOrDefault(t => t.TableName.Equals(request.TableName, StringComparison.OrdinalIgnoreCase));
             if (table == null) throw new KeyNotFoundException("הטבלה לא קיימת.");
 
-            var column = table.Columns.FirstOrDefault(c => c["ColumnName"].ToString().Equals(request.ColumnName, StringComparison.OrdinalIgnoreCase));
-            if (column == null) throw new KeyNotFoundException("העמודה לא קיימת.");
+            foreach (var update in request.UpdatedData)
+            {
+                string columnName = update.Key;
+                string newValue = update.Value?.ToString() ?? string.Empty;
 
-            ValidateFieldValue(request.ColumnName, request.NewValue, column["DataType"].ToString());
+                var column = table.Columns.FirstOrDefault(c => c["ColumnName"].ToString().Equals(columnName, StringComparison.OrdinalIgnoreCase));
+                if (column == null) 
+                    throw new KeyNotFoundException($"העמודה '{columnName}' לא קיימת בטבלת {request.TableName}.");
+
+                ValidateFieldValue(columnName, newValue, column["DataType"].ToString());
+            }
+
+            ValidateFieldValue("Reason", request.Reason, "NVARCHAR");
 
             int rowsAffected = await _tablesDo.UpdateRecord(request);
 
@@ -118,10 +127,12 @@ namespace TableManagementBl.BusinessObjects
             }
         }
 
-        public async Task AddTableRecord(string tableName, Dictionary<string, object> record, string user)
+        public async Task AddTableRecord(string tableName, Dictionary<string, object> record, string user, string reason)
         {
             if (string.IsNullOrEmpty(tableName) || record == null || !record.Any())
                 throw new ArgumentException("נתוני הוספה חסרים.");
+
+            ValidateFieldValue("Reason", reason, "NVARCHAR");
 
             var allMetadata = await GetAllTables();
             var table = allMetadata.FirstOrDefault(t => t.TableName.Equals(tableName, StringComparison.OrdinalIgnoreCase));
@@ -144,7 +155,7 @@ namespace TableManagementBl.BusinessObjects
             try
             {
                 var jsonData = JsonSerializer.Serialize(record);
-                await _tablesDo.AddTableRecord(tableName, jsonData, user ?? "SystemUser");
+                await _tablesDo.AddTableRecord(tableName, jsonData, user ?? "SystemUser", reason);
             }
             catch (Exception ex)
             {
@@ -153,6 +164,48 @@ namespace TableManagementBl.BusinessObjects
                     throw new ArgumentException(ex.Message);
                 }
                 throw new Exception("שגיאה בתהליך שמירת הרשומה: " + ex.Message);
+            }
+        }
+
+        public async Task DeleteTableRecord(DeleteRecordRequestDto request)
+        {
+            if (request == null || string.IsNullOrEmpty(request.TableName))
+                throw new ArgumentException("חובה לציין שם טבלה.");
+            
+            if (string.IsNullOrEmpty(request.Id))
+                throw new ArgumentException("חובה לציין מזהה רשומה למחיקה.");
+
+            ValidateFieldValue("Reason", request.Reason, "NVARCHAR");
+
+            var allMetadata = await GetAllTables();
+            var tableExists = allMetadata.Any(t => t.TableName.Equals(request.TableName, StringComparison.OrdinalIgnoreCase));
+            
+            if (!tableExists)
+                throw new KeyNotFoundException($"הטבלה '{request.TableName}' לא נמצאה במערכת.");
+
+            try
+            {
+                int rowsAffected = await _tablesDo.DeleteRecord(request.TableName, request.Id, request.UpdateUser, request.Reason);
+
+                if (rowsAffected == 0)
+                {
+                    throw new KeyNotFoundException($"המחיקה נכשלה: לא נמצאה רשומה עם מזהה '{request.Id}' בטבלת {request.TableName}.");
+                }
+            }
+            catch (SqlException ex)
+            {
+                if (ex.Number == 547 || ex.Number >= 50000) 
+                {
+                    throw new Exception(ex.Message); 
+                }
+                
+                throw new Exception("שגיאה בבסיס הנתונים בעת ניסיון המחיקה: " + ex.Message);
+            }
+            catch (Exception ex)
+            {
+                if (ex is KeyNotFoundException || ex is ArgumentException) throw;
+                
+                throw new Exception("קרתה שגיאה בלתי צפויה בתהליך המחיקה: " + ex.Message);
             }
         }
 
@@ -180,45 +233,5 @@ namespace TableManagementBl.BusinessObjects
                     throw new ArgumentException($"בשדה '{columnName}' חובה להזין מספר תקין.");
             }
         }
-
-        public async Task DeleteTableRecord(string tableName, string id)
-        {
-            if (string.IsNullOrEmpty(tableName))
-                throw new ArgumentException("חובה לציין שם טבלה.");
-            
-            if (string.IsNullOrEmpty(id))
-                throw new ArgumentException("חובה לציין מזהה רשומה למחיקה.");
-
-            var allMetadata = await GetAllTables();
-            var tableExists = allMetadata.Any(t => t.TableName.Equals(tableName, StringComparison.OrdinalIgnoreCase));
-            
-            if (!tableExists)
-                throw new KeyNotFoundException($"הטבלה '{tableName}' לא נמצאה במערכת.");
-
-            try
-            {
-                int rowsAffected = await _tablesDo.DeleteRecord(tableName, id);
-
-                if (rowsAffected == 0)
-                {
-                    throw new KeyNotFoundException($"המחיקה נכשלה: לא נמצאה רשומה עם מזהה '{id}' בטבלת {tableName}.");
-                }
-            }
-            catch (SqlException ex)
-            {
-                if (ex.Number == 547 || ex.Number >= 50000) 
-                {
-                    throw new Exception(ex.Message); 
-                }
-                
-                throw new Exception("שגיאה בבסיס הנתונים בעת ניסיון המחיקה: " + ex.Message);
-            }
-            catch (Exception ex)
-            {
-                if (ex is KeyNotFoundException || ex is ArgumentException) throw;
-                
-                throw new Exception("קרתה שגיאה בלתי צפויה בתהליך המחיקה: " + ex.Message);
-            }
-        }
-    }
+    }    
 }

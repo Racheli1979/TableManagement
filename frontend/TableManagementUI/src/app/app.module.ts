@@ -6,6 +6,7 @@ import { HttpClientModule } from '@angular/common/http';
 import { AppComponent } from './app.component';
 import { TablesComponent } from './components/tables/tables.component';
 import { ManageRecordModalComponent } from './components/manage-record-modal/manage-record-modal.component';
+import { ReasonModalComponent } from './components/reason-modal/reason-modal.component';
 
 @NgModule({
   declarations: [
@@ -16,7 +17,8 @@ import { ManageRecordModalComponent } from './components/manage-record-modal/man
   imports: [
     BrowserModule,
     FormsModule, 
-    HttpClientModule
+    HttpClientModule,
+    ReasonModalComponent
   ],
   providers: [],
   bootstrap: [AppComponent]
