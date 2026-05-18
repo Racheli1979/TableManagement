@@ -85,6 +85,10 @@ namespace TableManagementApi.Controllers
             }
             catch (Exception ex)
             {
+                if (ex.Message.Contains("Validation") || ex.Message.Contains("Security"))
+                {
+                    return BadRequest(new { message = ex.Message });
+                }
                 return StatusCode(500, new { message = "שגיאת מערכת בעדכון הרשומה", details = ex.Message });
             }
         }
@@ -99,7 +103,7 @@ namespace TableManagementApi.Controllers
 
             try
             {
-                await _tablesBo.AddTableRecord(request.TableName, request.RecordData, request.UpdateUser);
+                await _tablesBo.AddTableRecord(request.TableName, request.RecordData, request.UpdateUser, request.Reason);
                 return Ok(new { message = "הרשומה נוספה בהצלחה למערכת" });
             }
             catch (ArgumentException ex)
@@ -116,17 +120,17 @@ namespace TableManagementApi.Controllers
             }
         }
 
-        [HttpDelete("delete")]
-        public async Task<IActionResult> DeleteRecord([FromQuery] string tableName, [FromQuery] string id)
+        [HttpPost("delete")] 
+        public async Task<IActionResult> DeleteRecord([FromBody] DeleteRecordRequestDto request)
         {
-            if (string.IsNullOrEmpty(tableName) || string.IsNullOrEmpty(id))
+            if (request == null || string.IsNullOrEmpty(request.TableName) || string.IsNullOrEmpty(request.Id))
             {
                 return BadRequest(new { message = "שם טבלה ומזהה רשומה הם שדות חובה" });
             }
 
             try
             {
-                await _tablesBo.DeleteTableRecord(tableName, id);
+                await _tablesBo.DeleteTableRecord(request);
                 return Ok(new { message = "הרשומה נמחקה בהצלחה מהמערכת" });
             }
             catch (KeyNotFoundException ex)
@@ -142,5 +146,23 @@ namespace TableManagementApi.Controllers
                 return BadRequest(new { message = ex.Message });
             }
         }
+
+        // [HttpGet("audit-logs")]
+        // public async Task<IActionResult> GetAuditLogs([FromQuery] string? user, [FromQuery] DateTime? dateFrom)
+        // {
+        //     try
+        //     {
+        //         var logs = await _tablesBo.GetAuditLogs(user, dateFrom);
+        //         return Ok(logs);
+        //     }
+        //     catch (ArgumentException ex)
+        //     {
+        //         return BadRequest(new { message = ex.Message });
+        //     }
+        //     catch (Exception ex)
+        //     {
+        //         return StatusCode(500, new { message = "שגיאת מערכת בשליפת הלוגים", details = ex.Message });
+        //     }
+        // }
     }
 }

@@ -2,10 +2,13 @@ GO
 CREATE PROCEDURE AddNewRecord
     @TableName NVARCHAR(128),
     @JsonValues NVARCHAR(MAX), 
-    @UpdateUser NVARCHAR(128)
+    @UpdateUser NVARCHAR(128),
+    @Reason NVARCHAR(MAX) 
 AS
 BEGIN
     SET NOCOUNT ON;
+
+    EXEC ValidateColumnData @TableName = 'AuditLog', @ColumnName = 'Reason', @Value = @Reason;
 
     DECLARE @ColName NVARCHAR(128);
     DECLARE @ColValue NVARCHAR(MAX); 
@@ -46,7 +49,8 @@ BEGIN
     SELECT 
         @Cols = STRING_AGG(QUOTENAME([key]), ', '),
         @Vals = STRING_AGG('N''' + REPLACE(CAST([value] AS NVARCHAR(MAX)), '''', '''''') + '''', ', ')
-    FROM OPENJSON(@JsonValues);
+    FROM OPENJSON(@JsonValues)
+    WHERE [key] NOT IN ('REASON', 'reason');
 
     SET @SQL = N'INSERT INTO ' + QUOTENAME(@TableName) + 
                N' (' + @Cols + N', CREATE_USER, CREATE_DATE, UPDATE_USER, UPDATE_DATE) 
@@ -54,6 +58,28 @@ BEGIN
 
     BEGIN TRY
         EXEC sp_executesql @SQL, N'@User NVARCHAR(128)', @User = @UpdateUser;
+
+        INSERT INTO AuditLog (
+            TableName, 
+            RecordId, 
+            Action, 
+            UserName, 
+            ChangeDate, 
+            Reason, 
+            OldValues, 
+            NewValues
+        )
+        VALUES (
+            @TableName, 
+            NULL,       
+            'INSERT', 
+            @UpdateUser, 
+            GETDATE(), 
+            @Reason, 
+            NULL,       
+            @JsonValues 
+        );
+
     END TRY
     BEGIN CATCH
         IF CURSOR_STATUS('global', 'col_iterator') >= -1

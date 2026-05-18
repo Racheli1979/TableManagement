@@ -1,10 +1,9 @@
 namespace TableManagementContracts
 {
-    public class UpdateRecordRequestDto
+    public class DeleteRecordRequestDto 
     {
         public string TableName { get; set; }
-        public Dictionary<string, object> UpdatedData { get; set; }
-        public string IdValue { get; set; }
+        public string Id { get; set; }
         public string UpdateUser { get; set; }
         public string Reason { get; set; }
     }

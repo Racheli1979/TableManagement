@@ -1,0 +1,100 @@
+<!-- <div class="audit-container">
+  <header>
+    <h2 class="audit-title">
+      יומן פעולות (Audit Log) <span class="clock-icon">🕒</span>
+    </h2>
+    <button class="back-button" (click)="close.emit()">
+      <span class="icon">✕</span>
+      <span>חזרה לטבלאות</span>
+    </button>
+  </header>
+
+  <div class="table-card">
+    <div class="table-responsive">
+      <table class="audit-table">
+        <thead>
+          <tr>
+            <th>
+              <div class="th-content">
+                <span>זמן פעולה</span>
+                <input
+                  type="text"
+                  class="column-filter"
+                  placeholder="סנן לפי תאריך..."
+                  [(ngModel)]="filterValues.actionDate"
+                />
+              </div>
+            </th>
+
+            <th>
+              <div class="th-content">
+                <span>סוג</span>
+              </div>
+            </th>
+
+            <th>
+              <div class="th-content">
+                <span>טבלה</span>
+              </div>
+            </th>
+
+            <th>
+              <div class="th-content">
+                <span>מזהה רשומה</span>
+              </div>
+            </th>
+
+            <th>
+              <div class="th-content">
+                <span>משתמש</span>
+                <input
+                  type="text"
+                  class="column-filter"
+                  placeholder="סנן לפי משתמש..."
+                  [(ngModel)]="filterValues.updateUser"
+                />
+              </div>
+            </th>
+
+            <th>
+              <div class="th-content">
+                <span>סיבת שינוי</span>
+              </div>
+            </th>
+
+            <th>
+              <div class="th-content">
+                <span>פירוט השינוי</span>
+              </div>
+            </th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr *ngFor="let log of getFilteredLogs()">
+            <td class="date-cell">
+              {{ log.actionDate | date: "dd.MM.yyyy , HH:mm:ss" }}
+            </td>
+            <td>
+              <span [class]="'badge ' + log.operation.toLowerCase()">{{
+                log.operation
+              }}</span>
+            </td>
+            <td>{{ log.tableName }}</td>
+            <td>
+              <span class="id">
+                {{ log.recordId }}
+              </span>
+            </td>
+            <td class="user-cell">{{ log.updateUser }}</td>
+            <td class="reason-cell" [title]="log.reason">{{ log.reason }}</td>
+            <td>
+              <div class="json-scroll-container">
+                <span class="json-text">{{ log.updatedData }}</span>
+              </div>
+            </td>
+          </tr>
+        </tbody>
+      </table>
+    </div>
+  </div>
+</div> -->

@@ -1,0 +1,32 @@
+-- CREATE PROCEDURE GetAuditLogs
+--     @p_user_filter NVARCHAR(100) = NULL,
+--     @p_date_from   DATETIME      = NULL
+-- AS
+-- BEGIN
+--     SET NOCOUNT ON;
+
+--     IF @p_user_filter IS NOT NULL
+--     BEGIN
+--         EXEC ValidateColumnData 
+--             @TableName = 'AuditLog', 
+--             @ColumnName = 'UserName', 
+--             @Value = @p_user_filter;
+--     END
+
+--     SELECT 
+--         ChangeDate AS actionDate,
+--         Action     AS operation,
+--         TableName  AS tableName,
+--         RecordId   AS recordId,
+--         UserName   AS updateUser,
+--         Reason     AS reason,
+--         NewValues  AS updatedData
+--     FROM 
+--         AuditLog
+--     WHERE 
+--         (@p_user_filter IS NULL OR UserName = @p_user_filter)
+--         AND (@p_date_from IS NULL OR ChangeDate >= @p_date_from)
+--     ORDER BY 
+--         ChangeDate DESC;
+-- END
+-- GO

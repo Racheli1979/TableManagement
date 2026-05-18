@@ -1,5 +1,5 @@
 import { Injectable } from '@angular/core';
-import { HttpClient } from '@angular/common/http';
+import { HttpClient, HttpParams } from '@angular/common/http';
 import { Observable } from 'rxjs';
 
 export interface Column {
@@ -21,40 +21,77 @@ export interface Table {
 }
 
 export interface UpdateRecordRequest {
-  tableName: string;
-  columnName: string;
-  newValue: string;
-  idValue: string;
-  updateUser: string;
+  TableName: string;
+  UpdatedData: { [key: string]: any };
+  IdValue: string;
+  UpdateUser: string;
+  Reason: string;
 }
 
+export interface DeleteRecordRequest {
+  tableName: string;
+  id: string;
+  updateUser: string;
+  reason: string;
+}
+
+// export interface AuditLog {
+//   actionDate: string;
+//   operation: string;
+//   tableName: string;
+//   recordId: string;
+//   updateUser: string;
+//   reason: string;
+//   updatedData: string; 
+// }
+
 @Injectable({
-  providedIn: 'root'
+  providedIn: 'root',
 })
 export class TablesService {
   private apiUrl = 'http://localhost:5081/api/tables';
 
-  constructor(private http: HttpClient) { }
+  constructor(private http: HttpClient) {}
 
   getTables(): Observable<Table[]> {
     return this.http.get<Table[]>(this.apiUrl);
   }
 
   searchInTable(request: any): Observable<any> {
-    return this.http.post<any>('http://localhost:5081/api/tables/search', request);
+    return this.http.post<any>(
+      'http://localhost:5081/api/tables/search',
+      request,
+    );
   }
 
   updateRecord(request: UpdateRecordRequest): Observable<any> {
     return this.http.post(`${this.apiUrl}/update`, request);
   }
 
-  addRecord(request: { tableName: string, recordData: any, updateUser: string }): Observable<any> {
+  addRecord(request: {
+    tableName: string;
+    recordData: any;
+    updateUser: string;
+    reason: string;
+  }): Observable<any> {
     return this.http.post(`${this.apiUrl}/add`, request);
   }
 
-  deleteRecord(tableName: string, id: string): Observable<any> {
-    return this.http.delete(`${this.apiUrl}/delete`, {
-      params: { tableName, id }
-    });
+  deleteRecord(request: DeleteRecordRequest): Observable<any> {
+    return this.http.post(`${this.apiUrl}/delete`, request);
   }
+
+  // getAuditLogs(user?: string, dateFrom?: string): Observable<AuditLog[]> {
+  //   let params = new HttpParams();
+
+  //   if (user && user.trim() !== '') {
+  //     params = params.set('user', user);
+  //   }
+    
+  //   if (dateFrom) {
+  //     params = params.set('dateFrom', dateFrom);
+  //   }
+
+  //   return this.http.get<AuditLog[]>(`${this.apiUrl}/audit-logs`, { params });
+  // }
 }

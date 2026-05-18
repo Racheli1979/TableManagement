@@ -46,7 +46,7 @@
                   (ngModelChange)="localRecord[col.columnName] = saveTransform($event, col.dataType); validateSingleField(col)"
                   [maxlength]="col.maxLength ? col.maxLength + 1 : null" [readonly]="isReadOnly(col.columnName)"
                   class="form-input" [class.invalid-field]="errors[col.columnName]"
-                  [placeholder]="'הזן ' + col.columnName">
+                  [placeholder]="isRequired(col) ? 'חובה להזין ' + col.columnName : 'נא להזין ' + col.columnName">
               </div>
 
               <div class="error-message" *ngIf="errors[col.columnName]">

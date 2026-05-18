@@ -1,16 +1,17 @@
 import { Component, OnInit, OnDestroy } from '@angular/core';
 import { TablesService, Table, Column } from '../../services/tables.service';
-import { Subject, Subscription } from 'rxjs';
+import { Subject, Subscription, forkJoin, firstValueFrom } from 'rxjs';
 import { debounceTime, distinctUntilChanged } from 'rxjs/operators';
 
 @Component({
   selector: 'app-tables',
   templateUrl: './tables.component.html',
-  styleUrls: ['./tables.component.scss']
+  styleUrls: ['./tables.component.scss'],
 })
 export class TablesComponent implements OnInit, OnDestroy {
   allTables: Table[] = [];
   filteredTables: Table[] = [];
+  visibleColumns: Column[] = [];
   searchTermTable: string = '';
 
   showAuditLog: boolean = false;
@@ -28,41 +29,40 @@ export class TablesComponent implements OnInit, OnDestroy {
 
   isNewRecordMode: boolean = false;
 
-  constructor(private tablesService: TablesService) { }
+  constructor(private tablesService: TablesService) {}
 
   ngOnInit(): void {
     this.loadInitialData();
 
     this.subscriptions.push(
-      this.tableSearchSubject.pipe(
-        debounceTime(200),
-        distinctUntilChanged()
-      ).subscribe(term => {
-        if (!term || term.trim() === '') {
-          this.filteredTables = [...this.allTables];
-          this.selectedTableForColumnSearch = null;
-          this.showAuditLog = false;
-          this.allTables.forEach(t => t.rowData = undefined);
-          return;
-        }
+      this.tableSearchSubject
+        .pipe(debounceTime(200), distinctUntilChanged())
+        .subscribe((term) => {
+          if (!term || term.trim() === '') {
+            this.filteredTables = [...this.allTables];
+            this.selectedTableForColumnSearch = null;
+            this.showAuditLog = false;
+            this.allTables.forEach((t) => (t.rowData = undefined));
+            return;
+          }
 
-        const filtered = this.allTables.filter(t =>
-          t.tableName.toLowerCase().includes(term.toLowerCase())
-        );
+          const filtered = this.allTables.filter((t) =>
+            t.tableName.toLowerCase().includes(term.toLowerCase()),
+          );
 
-        this.filteredTables = filtered;
+          this.filteredTables = filtered;
 
-        if (filtered.length === 1) {
-          this.toggleTable(filtered[0]);
-        }
-      })
+          if (filtered.length === 1) {
+            this.toggleTable(filtered[0]);
+          }
+        }),
     );
   }
 
   loadInitialData() {
     this.tablesService.getTables().subscribe({
       next: (data: any[]) => {
-        this.allTables = data.map(t => ({
+        this.allTables = data.map((t) => ({
           tableName: t.tableName || t.TableName,
           schemaName: t.schemaName || t.SchemaName,
           objectType: t.objectType || t.ObjectType,
@@ -72,14 +72,14 @@ export class TablesComponent implements OnInit, OnDestroy {
             isNullable: c.isNullable || c.IsNullable,
             maxLength: c.maxLength || c.MaxLength,
             isForeignKey: c.isForeignKey || c.IsForeignKey,
-            relatedTable: c.relatedTable || c.RelatedTable
-          }))
+            relatedTable: c.relatedTable || c.RelatedTable,
+          })),
         }));
         this.filteredTables = [...this.allTables];
       },
       error: (err) => {
         alert('שגיאה בטעינת הטבלאות: ' + (err.error?.message || 'תקלת תקשורת'));
-      }
+      },
     });
   }
 
@@ -91,25 +91,37 @@ export class TablesComponent implements OnInit, OnDestroy {
     this.showAuditLog = false;
     this.selectedTableForColumnSearch = table;
 
+    const auditFields = [
+      'CREATE_USER',
+      'CREATE_DATE',
+      'UPDATE_USER',
+      'UPDATE_DATE',
+    ];
+    this.visibleColumns = [...table.columns].sort((a, b) => {
+      const isAAudit = auditFields.includes(a.columnName.toUpperCase());
+      const isBAudit = auditFields.includes(b.columnName.toUpperCase());
+      return (isAAudit ? 1 : 0) - (isBAudit ? 1 : 0);
+    });
+
     const request = {
       TableName: table.tableName,
       ColumnName: table.columns[0]?.columnName || '',
-      SearchValue: ''
+      SearchValue: '',
     };
 
-    this.tablesService.searchInTable(request)
-      .subscribe({
-        next: (data: any) => {
-          table.rowData = data;
-        },
-        error: (err) => {
-          console.error('Search Error:', err);
-          const errorMessage = err.error?.message || err.error || 'שגיאה בשליפת נתונים';
-          alert(`שים לב: ${errorMessage}`);
+    this.tablesService.searchInTable(request).subscribe({
+      next: (data: any) => {
+        table.rowData = data;
+      },
+      error: (err) => {
+        console.error('Search Error:', err);
+        const errorMessage =
+          err.error?.message || err.error || 'שגיאה בשליפת נתונים';
+        alert(`שים לב: ${errorMessage}`);
 
-          table.rowData = [];
-        }
-      });
+        table.rowData = [];
+      },
+    });
   }
 
   getFilteredRows(): any[] {
@@ -117,25 +129,30 @@ export class TablesComponent implements OnInit, OnDestroy {
 
     if (this.globalSearch) {
       const search = this.globalSearch.toLowerCase();
-      rows = rows.filter(row =>
-        this.selectedTableForColumnSearch!.columns.some(col => {
+      rows = rows.filter((row) =>
+        this.selectedTableForColumnSearch!.columns.some((col) => {
           const val = row[col.columnName]?.toString().toLowerCase() || '';
-          const displayVal = row[col.columnName + '_Display']?.toString().toLowerCase() || '';
+          const displayVal =
+            row[col.columnName + '_Display']?.toString().toLowerCase() || '';
           return val.includes(search) || displayVal.includes(search);
-        })
+        }),
       );
     }
     const filterKeys = Object.keys(this.columnFilters);
     if (filterKeys.length > 0) {
-      rows = rows.filter(row => {
-        return filterKeys.every(colName => {
+      rows = rows.filter((row) => {
+        return filterKeys.every((colName) => {
           const filterValue = this.columnFilters[colName]?.toLowerCase();
           if (!filterValue) return true;
 
           const originalValue = row[colName]?.toString().toLowerCase() || '';
-          const displayValue = row[colName + '_Display']?.toString().toLowerCase() || '';
+          const displayValue =
+            row[colName + '_Display']?.toString().toLowerCase() || '';
 
-          return originalValue.includes(filterValue) || displayValue.includes(filterValue);
+          return (
+            originalValue.includes(filterValue) ||
+            displayValue.includes(filterValue)
+          );
         });
       });
     }
@@ -143,19 +160,10 @@ export class TablesComponent implements OnInit, OnDestroy {
     return rows;
   }
 
-  getVisibleColumns(): Column[] {
-    if (!this.selectedTableForColumnSearch || !this.selectedTableForColumnSearch.columns) {
-      return [];
-    }
-    const auditFields = ['CREATE_USER', 'CREATE_DATE', 'UPDATE_USER', 'UPDATE_DATE'];
-    return this.selectedTableForColumnSearch.columns.filter(col =>
-      !auditFields.includes(col.columnName.toUpperCase())
-    );
-  }
-
-  openEditModal(record: any) {
+  openEditModal(row: any) {
     this.isNewRecordMode = false;
-    this.selectedRecord = { ...record };
+    this.selectedRecord = { ...row };
+    this.selectedTableForEdit = this.selectedTableForColumnSearch;
   }
 
   handleSave(updatedData: any) {
@@ -169,7 +177,7 @@ export class TablesComponent implements OnInit, OnDestroy {
   }
 
   ngOnDestroy() {
-    this.subscriptions.forEach(s => s.unsubscribe());
+    this.subscriptions.forEach((s) => s.unsubscribe());
   }
 
   openAddModal() {
@@ -179,26 +187,134 @@ export class TablesComponent implements OnInit, OnDestroy {
     console.log('Table for add:', this.selectedTableForEdit);
   }
 
-  onDelete(row: any) {
-    const idValue = row.Id || row.id || row.ID;
-    if (!this.selectedTableForColumnSearch) return;
+  showReasonModal = false;
+  reasonModalData: any = {};
+  pendingAction: { type: 'ADD' | 'UPDATE' | 'DELETE'; data: any } | null = null;
 
-    const tableName = this.selectedTableForColumnSearch.tableName;
+  handleDataFromManage(data: any) {
+    this.pendingAction = {
+      type: this.isNewRecordMode ? 'ADD' : 'UPDATE',
+      data: data,
+    };
 
-    if (confirm(`האם את בטוחה שברצונך למחוק את רשומה ${idValue}?`)) {
-      this.tablesService.deleteRecord(tableName, idValue.toString()).subscribe({
-        next: (res) => {
-          alert(res.message || 'הרשומה נמחקה בהצלחה');
+    this.reasonModalData = {
+      title: this.isNewRecordMode ? 'הוספת רשומה' : 'עריכת רשומה',
+      description: 'נא להזין סיבה לשינוי המידע בטבלה',
+      actionName: this.isNewRecordMode ? 'הוסף' : 'שמור',
+      minLength: 5,
+    };
 
-          if (this.selectedTableForColumnSearch) {
-            this.toggleTable(this.selectedTableForColumnSearch);
-          }
-        },
-        error: (err) => {
-          const errorMessage = err.error?.message || 'שגיאה במחיקה';
-          alert(errorMessage);
-        }
-      });
-    }
+    this.selectedRecord = null;
+    this.showReasonModal = true;
   }
+
+  onDelete(row: any) {
+    this.pendingAction = { type: 'DELETE', data: row };
+    this.reasonModalData = {
+      title: 'מחיקת רשומה',
+      description: 'נא להזין סיבה למחיקת הרשומה מהמערכת',
+      actionName: 'מחק',
+      minLength: 5,
+    };
+    this.showReasonModal = true;
+  }
+
+  async finalizeAction(reasonText: string) {
+    if (!this.pendingAction || !this.selectedTableForColumnSearch) return;
+
+    const { type, data } = this.pendingAction;
+    const tableName = this.selectedTableForColumnSearch.tableName;
+    this.showReasonModal = false;
+
+    try {
+      if (type === 'ADD') {
+        await firstValueFrom(
+          this.tablesService.addRecord({
+            tableName,
+            recordData: data,
+            updateUser: 'Admin',
+            reason: reasonText,
+          }),
+        );
+      } else if (type === 'UPDATE') {
+        const idValue = String(data['Id'] || data['ID'] || data['id']);
+
+        const forbiddenFields = [
+          'Id',
+          'ID',
+          'id',
+          'CREATE_DATE',
+          'CREATE_USER',
+          'UPDATE_DATE',
+          'UPDATE_USER',
+        ];
+
+        const updatedFields: { [key: string]: any } = {};
+
+        this.selectedTableForColumnSearch.columns.forEach((col) => {
+          const colName = col.columnName;
+          if (
+            !forbiddenFields.includes(colName) &&
+            !colName.endsWith('_Display')
+          ) {
+            const newValue = data[colName];
+            const originalValue = data[colName + '_Original'];
+
+            if (String(newValue) !== String(originalValue || '')) {
+              updatedFields[colName] = newValue;
+            }
+          }
+        });
+
+        if (Object.keys(updatedFields).length === 0) {
+          alert('לא בוצעו שינויים ברשומה');
+          return;
+        }
+
+        await firstValueFrom(
+          this.tablesService.updateRecord({
+            TableName: tableName,
+            IdValue: idValue,
+            UpdateUser: 'Admin',
+            Reason: reasonText,
+            UpdatedData: updatedFields,
+          } as any),
+        );
+      } else if (type === 'DELETE') {
+        const idValue = data.Id || data.id || data.ID;
+        await firstValueFrom(
+          this.tablesService.deleteRecord({
+            tableName,
+            id: idValue,
+            updateUser: 'Admin',
+            reason: reasonText,
+          }),
+        );
+      }
+
+      alert('הפעולה בוצעה בהצלחה');
+      this.toggleTable(this.selectedTableForColumnSearch);
+    } catch (err: any) {
+      console.error('Finalize Error:', err);
+      let errorMessage = 'הפעולה נכשלה בשרת';
+
+      if (typeof err.error === 'string') {
+        errorMessage = err.error;
+      } else if (err.error && err.error.message) {
+        errorMessage = err.error.message;
+      } else if (err.error && err.error.errors) {
+        errorMessage = Object.values(err.error.errors).flat().join('\n');
+      }
+
+      alert(errorMessage);
+    }
+    this.showReasonModal = false;
+    this.pendingAction = null;
+    this.isNewRecordMode = false;
+  }
+
+  // openAuditLog() {
+  //   this.showAuditLog = true;
+  //   this.selectedTableForColumnSearch = null;
+  // }
 }

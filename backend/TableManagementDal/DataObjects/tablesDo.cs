@@ -47,7 +47,7 @@ namespace TableManagementDal.DataObjects
             );
         }
 
-        public async Task<int> AddTableRecord(string tableName, string jsonData, string user)
+        public async Task<int> AddTableRecord(string tableName, string jsonData, string user, string reason)
         {
             using var connection = new SqlConnection(_connectionString);
             
@@ -55,6 +55,7 @@ namespace TableManagementDal.DataObjects
             parameters.Add("@TableName", tableName);
             parameters.Add("@JsonValues", jsonData);
             parameters.Add("@UpdateUser", user);
+            parameters.Add("@Reason", reason);
 
             return await connection.ExecuteAsync(
                 "AddNewRecord", 
@@ -67,12 +68,14 @@ namespace TableManagementDal.DataObjects
         {
             using var connection = new SqlConnection(_connectionString);
             
+            var jsonData = System.Text.Json.JsonSerializer.Serialize(request.UpdatedData);
+
             var parameters = new DynamicParameters();
             parameters.Add("@TableName", request.TableName);
-            parameters.Add("@ColumnName", request.ColumnName);
-            parameters.Add("@NewValue", request.NewValue ?? (object)DBNull.Value);
+            parameters.Add("@NewDataJson", jsonData);
             parameters.Add("@IdValue", request.IdValue);
             parameters.Add("@UpdateUser", request.UpdateUser);
+            parameters.Add("@Reason", request.Reason);
 
             return await connection.ExecuteAsync(
                 "UpdateRecord", 
@@ -81,13 +84,15 @@ namespace TableManagementDal.DataObjects
             );
         }
 
-        public async Task<int> DeleteRecord(string tableName, string id)
+        public async Task<int> DeleteRecord(string tableName, string id, string user, string reason)
         {
             using var connection = new SqlConnection(_connectionString);
             
             var parameters = new DynamicParameters();
             parameters.Add("@TableName", tableName);
             parameters.Add("@RecordId", id);
+            parameters.Add("@UpdateUser", user); 
+            parameters.Add("@Reason", reason);
 
             return await connection.ExecuteAsync(
                 "DeleteRecord", 
@@ -95,5 +100,20 @@ namespace TableManagementDal.DataObjects
                 commandType: CommandType.StoredProcedure
             );
         }
+
+        // public async Task<IEnumerable<dynamic>> GetAuditLogs(string? userFilter = null, DateTime? dateFrom = null)
+        // {
+        //     using var connection = new SqlConnection(_connectionString);
+            
+        //     var parameters = new DynamicParameters();
+        //     parameters.Add("@p_user_filter", userFilter);
+        //     parameters.Add("@p_date_from", dateFrom);
+
+        //     return await connection.QueryAsync<dynamic>(
+        //         "GetAuditLogs", 
+        //         parameters, 
+        //         commandType: CommandType.StoredProcedure
+        //     );
+        // }
     }
 }
