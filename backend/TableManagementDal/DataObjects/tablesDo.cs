@@ -115,5 +115,20 @@ namespace TableManagementDal.DataObjects
         //         commandType: CommandType.StoredProcedure
         //     );
         // }
+
+        public async Task<TablePermissionsDto?> GetTablePermissions(string tableName, string userName)
+        {
+            using var connection = new SqlConnection(_connectionString);
+            
+            var parameters = new DynamicParameters();
+            parameters.Add("@TableName", tableName, DbType.String);
+            parameters.Add("@UserName", userName, DbType.String);
+
+            return await connection.QueryFirstOrDefaultAsync<TablePermissionsDto>(
+                "GetTablePermissions",
+                parameters,
+                commandType: CommandType.StoredProcedure
+            );
+        }
     }
 }

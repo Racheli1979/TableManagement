@@ -39,9 +39,11 @@
     </nav>
   </aside>
 
+  <aside class="sidebar" style="display: none;"></aside>
+
   <main class="main-content">
     <header class="content-header">
-      <h1 class="table-title" *ngIf="selectedTableForColumnSearch && !showAuditLog">
+      <h1 class="table-title" *ngIf="selectedTableForColumnSearch && !showAuditLog && currentPermissions.canView">
         טבלת נתונים: {{ selectedTableForColumnSearch.tableName }}
         <span class="records-count">
           ({{ getFilteredRows().length }} מתוך
@@ -58,14 +60,14 @@
 
       <button
         class="btn-add-row"
-        *ngIf="selectedTableForColumnSearch && !showAuditLog"
+        *ngIf="selectedTableForColumnSearch && !showAuditLog && currentPermissions.canAdd"
         (click)="openAddModal()"
       >
         + הוספת רשומה חדשה
       </button>
     </header>
 
-    <div class="table-card shadow" *ngIf="selectedTableForColumnSearch && !showAuditLog">
+    <div class="table-card shadow" *ngIf="selectedTableForColumnSearch && !showAuditLog && currentPermissions.canView">
       <div class="global-search-bar">
         <input
           type="text"
@@ -89,22 +91,18 @@
                   />
                 </div>
               </th>
-              <th class="actions-col">פעולות</th>
+              <th class="actions-col" *ngIf="currentPermissions.canEdit || currentPermissions.canDelete">פעולות</th>
             </tr>
           </thead>
           <tbody>
             <tr *ngFor="let row of getFilteredRows()">
               <td *ngFor="let col of visibleColumns">
-                <ng-container
-                  *ngIf="col.dataType.toLowerCase().includes('date'); else notDate"
-                >
+                <ng-container *ngIf="col.dataType.toLowerCase().includes('date'); else notDate">
                   {{ row[col.columnName] | date: "dd/MM/yyyy" }}
                 </ng-container>
 
                 <ng-template #notDate>
-                  <ng-container
-                    *ngIf="row[col.columnName + '_Display']; else regularValue"
-                  >
+                  <ng-container *ngIf="row[col.columnName + '_Display']; else regularValue">
                     <span class="fk-container">
                       <span class="fk-display">
                         ({{ row[col.columnName + "_Display"] }})
@@ -118,14 +116,17 @@
                   {{ row[col.columnName] || "-" }}
                 </ng-template>
               </td>
-              <td class="actions-cell">
+              
+              <td class="actions-cell" *ngIf="currentPermissions.canEdit || currentPermissions.canDelete">
                 <button
+                  *ngIf="currentPermissions.canEdit"
                   class="btn-icon edit"
-                  (click)="selectedRecord = row; selectedTableForEdit = selectedTableForColumnSearch"
+                  (click)="openEditModal(row)"
                 >
                   ✏️
                 </button>
                 <button
+                  *ngIf="currentPermissions.canDelete"
                   class="btn-icon delete"
                   (click)="$event.stopPropagation(); onDelete(row)"
                 >
@@ -135,6 +136,14 @@
             </tr>
           </tbody>
         </table>
+      </div>
+    </div>
+
+    <div class="table-card shadow" *ngIf="selectedTableForColumnSearch && !showAuditLog && !currentPermissions.canView">
+      <div class="empty-state">
+        <div class="empty-icon" style="color: #dc3545;">🔒</div>
+        <h2>גישה נדחתה</h2>
+        <p>אין לך הרשאות צפייה עבור הטבלה "{{ selectedTableForColumnSearch.tableName }}".</p>
       </div>
     </div>
 

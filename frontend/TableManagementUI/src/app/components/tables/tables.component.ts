@@ -1,6 +1,11 @@
 import { Component, OnInit, OnDestroy } from '@angular/core';
-import { TablesService, Table, Column } from '../../services/tables.service';
-import { Subject, Subscription, forkJoin, firstValueFrom } from 'rxjs';
+import {
+  TablesService,
+  Table,
+  Column,
+  TablePermissions,
+} from '../../services/tables.service';
+import { Subject, Subscription, firstValueFrom } from 'rxjs';
 import { debounceTime, distinctUntilChanged } from 'rxjs/operators';
 
 @Component({
@@ -23,6 +28,16 @@ export class TablesComponent implements OnInit, OnDestroy {
 
   globalSearch: string = '';
   columnFilters: { [key: string]: string } = {};
+
+  currentPermissions: TablePermissions = {
+    canView: false,
+    canAdd: false,
+    canEdit: false,
+    canDelete: false,
+  };
+
+  // 👤 שם המשתמש המחובר כרגע במערכת
+  readonly currentLoggedInUser: string = 'Manager';
 
   private tableSearchSubject = new Subject<string>();
   private subscriptions: Subscription[] = [];
@@ -103,6 +118,44 @@ export class TablesComponent implements OnInit, OnDestroy {
       return (isAAudit ? 1 : 0) - (isBAudit ? 1 : 0);
     });
 
+    this.currentPermissions = {
+      canView: false,
+      canAdd: false,
+      canEdit: false,
+      canDelete: false,
+    };
+
+    this.tablesService
+      .getTablePermissions(table.tableName, this.currentLoggedInUser)
+      .subscribe({
+        next: (perms: any) => {
+          this.currentPermissions = {
+            canView: perms.CanView ?? perms.canView ?? false,
+            canAdd: perms.CanAdd ?? perms.canAdd ?? false,
+            canEdit: perms.CanEdit ?? perms.canEdit ?? false,
+            canDelete: perms.CanDelete ?? perms.canDelete ?? false,
+          };
+
+          if (!this.currentPermissions.canView) {
+            table.rowData = [];
+            alert(`אין לך הרשאת צפייה בטבלה ${table.tableName}`);
+            return;
+          }
+
+          this.loadTableData(table);
+        },
+        error: (err) => {
+          console.error('Error fetching permissions:', err);
+          alert(
+            'שגיאה בבדיקת הרשאות אבטחה: ' +
+              (err.error?.message || 'גישה נדחתה'),
+          );
+          table.rowData = [];
+        },
+      });
+  }
+
+  private loadTableData(table: Table): void {
     const request = {
       TableName: table.tableName,
       ColumnName: table.columns[0]?.columnName || '',
@@ -118,7 +171,6 @@ export class TablesComponent implements OnInit, OnDestroy {
         const errorMessage =
           err.error?.message || err.error || 'שגיאה בשליפת נתונים';
         alert(`שים לב: ${errorMessage}`);
-
         table.rowData = [];
       },
     });
@@ -161,6 +213,10 @@ export class TablesComponent implements OnInit, OnDestroy {
   }
 
   openEditModal(row: any) {
+    if (!this.currentPermissions.canEdit) {
+      alert('אין לך הרשאה לערוך רשומות בטבלה זו');
+      return;
+    }
     this.isNewRecordMode = false;
     this.selectedRecord = { ...row };
     this.selectedTableForEdit = this.selectedTableForColumnSearch;
@@ -181,6 +237,10 @@ export class TablesComponent implements OnInit, OnDestroy {
   }
 
   openAddModal() {
+    if (!this.currentPermissions.canAdd) {
+      alert('אין לך הרשאה להוסיף רשומות לטבלה זו');
+      return;
+    }
     this.isNewRecordMode = true;
     this.selectedTableForEdit = this.selectedTableForColumnSearch;
     this.selectedRecord = {};
@@ -209,6 +269,10 @@ export class TablesComponent implements OnInit, OnDestroy {
   }
 
   onDelete(row: any) {
+    if (!this.currentPermissions.canDelete) {
+      alert('אין לך הרשאה למחוק רשומות מטבלה זו');
+      return;
+    }
     this.pendingAction = { type: 'DELETE', data: row };
     this.reasonModalData = {
       title: 'מחיקת רשומה',
@@ -232,7 +296,7 @@ export class TablesComponent implements OnInit, OnDestroy {
           this.tablesService.addRecord({
             tableName,
             recordData: data,
-            updateUser: 'Admin',
+            updateUser: this.currentLoggedInUser,
             reason: reasonText,
           }),
         );
@@ -275,7 +339,7 @@ export class TablesComponent implements OnInit, OnDestroy {
           this.tablesService.updateRecord({
             TableName: tableName,
             IdValue: idValue,
-            UpdateUser: 'Admin',
+            UpdateUser: this.currentLoggedInUser,
             Reason: reasonText,
             UpdatedData: updatedFields,
           } as any),
@@ -286,7 +350,7 @@ export class TablesComponent implements OnInit, OnDestroy {
           this.tablesService.deleteRecord({
             tableName,
             id: idValue,
-            updateUser: 'Admin',
+            updateUser: this.currentLoggedInUser,
             reason: reasonText,
           }),
         );

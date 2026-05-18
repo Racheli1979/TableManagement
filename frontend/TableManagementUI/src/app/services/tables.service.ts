@@ -35,6 +35,13 @@ export interface DeleteRecordRequest {
   reason: string;
 }
 
+export interface TablePermissions {
+  canView: boolean;
+  canAdd: boolean;
+  canEdit: boolean;
+  canDelete: boolean;
+}
+
 // export interface AuditLog {
 //   actionDate: string;
 //   operation: string;
@@ -94,4 +101,12 @@ export class TablesService {
 
   //   return this.http.get<AuditLog[]>(`${this.apiUrl}/audit-logs`, { params });
   // }
+
+  getTablePermissions(tableName: string, userName: string): Observable<TablePermissions> {
+    let params = new HttpParams()
+      .set('tableName', tableName)
+      .set('userName', userName);
+
+    return this.http.get<TablePermissions>(`${this.apiUrl}/permissions`, { params });
+  }
 }

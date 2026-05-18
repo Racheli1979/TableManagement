@@ -18,6 +18,33 @@ namespace TableManagementBl.BusinessObjects
             _tablesDo = tablesDo;
         }
 
+        public async Task<TablePermissionsDto> GetTablePermissions(string tableName, string userName)
+        {
+            if (string.IsNullOrEmpty(tableName))
+                throw new ArgumentException("חובה לציין שם טבלה לצורך בדיקת הרשאות.");
+                
+            if (string.IsNullOrEmpty(userName))
+                throw new ArgumentException("חובה לציין שם משתמש לצורך בדיקת הרשאות.");
+
+            ValidateFieldValue("TableName", tableName, "NVARCHAR");
+            ValidateFieldValue("UserName", userName, "NVARCHAR");
+
+            try
+            {
+                var permissions = await _tablesDo.GetTablePermissions(tableName, userName);
+                
+                return permissions ?? new TablePermissionsDto { CanView = false, CanAdd = false, CanEdit = false, CanDelete = false };
+            }
+            catch (SqlException ex)
+            {
+                throw new UnauthorizedAccessException($"שגיאת אבטחה בבסיס הנתונים: {ex.Message}", ex);
+            }
+            catch (Exception ex)
+            {
+                throw new Exception("שגיאה בתהליך בדיקת ההרשאות במערכת.", ex);
+            }
+        }
+
         public async Task<List<TableMetadataDto>> GetAllTables()
         {
             try
@@ -101,6 +128,13 @@ namespace TableManagementBl.BusinessObjects
             if (request == null || string.IsNullOrEmpty(request.TableName) || request.UpdatedData == null || !request.UpdatedData.Any())
                 throw new ArgumentException("נתוני עדכון חסרים או שלא נבחרו שדות לשינוי.");
 
+            string currentUser = request.UpdateUser ?? "UnknownUser";
+            var permissions = await GetTablePermissions(request.TableName, currentUser);
+            if (!permissions.CanEdit)
+            {
+                throw new UnauthorizedAccessException($"אבטחה: למשתמש '{currentUser}' אין הרשאת עריכה (UPDATE) עבור הטבלה '{request.TableName}'.");
+            }
+
             var allMetadata = await GetAllTables();
             var table = allMetadata.FirstOrDefault(t => t.TableName.Equals(request.TableName, StringComparison.OrdinalIgnoreCase));
             if (table == null) throw new KeyNotFoundException("הטבלה לא קיימת.");
@@ -131,6 +165,13 @@ namespace TableManagementBl.BusinessObjects
         {
             if (string.IsNullOrEmpty(tableName) || record == null || !record.Any())
                 throw new ArgumentException("נתוני הוספה חסרים.");
+
+            string currentUser = user ?? "SystemUser";
+            var permissions = await GetTablePermissions(tableName, currentUser);
+            if (!permissions.CanAdd)
+            {
+                throw new UnauthorizedAccessException($"אבטחה: למשתמש '{currentUser}' אין הרשאת הוספה (INSERT) עבור הטבלה '{tableName}'.");
+            }
 
             ValidateFieldValue("Reason", reason, "NVARCHAR");
 
@@ -174,6 +215,13 @@ namespace TableManagementBl.BusinessObjects
             
             if (string.IsNullOrEmpty(request.Id))
                 throw new ArgumentException("חובה לציין מזהה רשומה למחיקה.");
+
+            string currentUser = request.UpdateUser ?? "UnknownUser";
+            var permissions = await GetTablePermissions(request.TableName, currentUser);
+            if (!permissions.CanDelete)
+            {
+                throw new UnauthorizedAccessException($"אבטחה: למשתמש '{currentUser}' אין הרשאת מחיקה (DELETE) עבור הטבלה '{request.TableName}'.");
+            }
 
             ValidateFieldValue("Reason", request.Reason, "NVARCHAR");
 
