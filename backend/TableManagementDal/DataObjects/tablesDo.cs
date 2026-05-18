@@ -100,5 +100,20 @@ namespace TableManagementDal.DataObjects
                 commandType: CommandType.StoredProcedure
             );
         }
+
+        // public async Task<IEnumerable<dynamic>> GetAuditLogs(string? userFilter = null, DateTime? dateFrom = null)
+        // {
+        //     using var connection = new SqlConnection(_connectionString);
+            
+        //     var parameters = new DynamicParameters();
+        //     parameters.Add("@p_user_filter", userFilter);
+        //     parameters.Add("@p_date_from", dateFrom);
+
+        //     return await connection.QueryAsync<dynamic>(
+        //         "GetAuditLogs", 
+        //         parameters, 
+        //         commandType: CommandType.StoredProcedure
+        //     );
+        // }
     }
 }

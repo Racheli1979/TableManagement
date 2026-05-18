@@ -146,5 +146,23 @@ namespace TableManagementApi.Controllers
                 return BadRequest(new { message = ex.Message });
             }
         }
+
+        // [HttpGet("audit-logs")]
+        // public async Task<IActionResult> GetAuditLogs([FromQuery] string? user, [FromQuery] DateTime? dateFrom)
+        // {
+        //     try
+        //     {
+        //         var logs = await _tablesBo.GetAuditLogs(user, dateFrom);
+        //         return Ok(logs);
+        //     }
+        //     catch (ArgumentException ex)
+        //     {
+        //         return BadRequest(new { message = ex.Message });
+        //     }
+        //     catch (Exception ex)
+        //     {
+        //         return StatusCode(500, new { message = "שגיאת מערכת בשליפת הלוגים", details = ex.Message });
+        //     }
+        // }
     }
 }

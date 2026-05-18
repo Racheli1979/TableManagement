@@ -1,5 +1,5 @@
 GO
-CREATE OR ALTER PROCEDURE DeleteRecord
+CREATE PROCEDURE DeleteRecord
     @TableName NVARCHAR(128),
     @RecordId NVARCHAR(450),
     @UpdateUser NVARCHAR(128), 

@@ -1,5 +1,5 @@
 GO
-CREATE OR ALTER PROCEDURE ValidateColumnData
+CREATE PROCEDURE ValidateColumnData
     @TableName NVARCHAR(128),
     @ColumnName NVARCHAR(128),
     @Value NVARCHAR(MAX)
@@ -7,9 +7,14 @@ AS
 BEGIN
     SET NOCOUNT ON;
 
+    IF LOWER(@ColumnName) = 'reason' AND (ISNULL(@Value, '') = '')
+    BEGIN
+        ;THROW 50002, N'חובה להזין סיבה לביצוע הפעולה.', 1;
+    END
+
     IF UPPER(ISNULL(@Value, '')) LIKE '%DROP%' OR UPPER(ISNULL(@Value, '')) LIKE '%DELETE%' 
        OR UPPER(ISNULL(@Value, '')) LIKE '%UPDATE%' OR UPPER(ISNULL(@Value, '')) LIKE '%SELECT%' 
-       OR @Value LIKE '%--%'
+       OR UPPER(ISNULL(@Value, '')) LIKE '%TRUNCATE%' OR @Value LIKE '%--%'
     BEGIN
         ;THROW 50001, 'Security Violation: Forbidden SQL keyword detected.', 1;
     END
@@ -30,7 +35,7 @@ BEGIN
     WHERE c.TABLE_NAME = @TableName AND c.COLUMN_NAME = @ColumnName;
 
     IF @IsNullable = 'NO' 
-       AND @IsIdentity = 0 
+       AND ISNULL(@IsIdentity, 0) = 0 
        AND @HasDefault IS NULL 
        AND (NULLIF(LTRIM(RTRIM(ISNULL(@Value, ''))), '') IS NULL)
     BEGIN
@@ -54,7 +59,7 @@ BEGIN
         END
     END
 
-    IF (@ColumnName LIKE '%Name%' OR @ColumnName LIKE '%שם%') 
+    IF (@ColumnName LIKE '%Name%' OR @ColumnName LIKE N'%שם%') 
        AND LTRIM(RTRIM(ISNULL(@Value, ''))) <> ''
     BEGIN
         IF @Value LIKE '%[{}]%' OR @Value LIKE '%[<>]%' OR @Value LIKE '%[#$^*]%'
@@ -73,20 +78,22 @@ BEGIN
             ;THROW 50007, @DateMsg, 1;
         END
         
-        DECLARE @InputDate DATETIME = CAST(@Value AS DATETIME);
+        DECLARE @InputDate DATETIME = TRY_CAST(@Value AS DATETIME);
 
-        IF @InputDate > GETDATE()
+        IF @InputDate IS NOT NULL
         BEGIN
-            DECLARE @FutureMsg NVARCHAR(200) = N'Validation Error: Date in [' + @ColumnName + N'] cannot be in the future.';
-            ;THROW 50009, @FutureMsg, 1;
-        END
+            IF @InputDate > GETDATE()
+            BEGIN
+                DECLARE @FutureMsg NVARCHAR(200) = N'Validation Error: Date in [' + @ColumnName + N'] cannot be in the future.';
+                ;THROW 50009, @FutureMsg, 1;
+            END
 
-        IF @InputDate < DATEADD(YEAR, -1, GETDATE())
-        BEGIN
-            DECLARE @OldMsg NVARCHAR(200) = N'Validation Error: Date in [' + @ColumnName + N'] is too old (more than 1 year ago).';
-            ;THROW 50010, @OldMsg, 1;
+            IF @InputDate < DATEADD(YEAR, -1, GETDATE())
+            BEGIN
+                DECLARE @OldMsg NVARCHAR(200) = N'Validation Error: Date in [' + @ColumnName + N'] is too old (more than 1 year ago).';
+                ;THROW 50010, @OldMsg, 1;
+            END
         END
     END
-
 END
 GO

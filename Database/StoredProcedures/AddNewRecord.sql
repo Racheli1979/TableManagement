@@ -1,5 +1,5 @@
 GO
-CREATE OR ALTER PROCEDURE AddNewRecord
+CREATE PROCEDURE AddNewRecord
     @TableName NVARCHAR(128),
     @JsonValues NVARCHAR(MAX), 
     @UpdateUser NVARCHAR(128),

@@ -273,12 +273,12 @@ export class TablesComponent implements OnInit, OnDestroy {
 
         await firstValueFrom(
           this.tablesService.updateRecord({
-            TableName: tableName, 
-            IdValue: idValue, 
-            UpdateUser: 'Admin', 
-            Reason: reasonText, 
-            UpdatedData: updatedFields, 
-          }as any),
+            TableName: tableName,
+            IdValue: idValue,
+            UpdateUser: 'Admin',
+            Reason: reasonText,
+            UpdatedData: updatedFields,
+          } as any),
         );
       } else if (type === 'DELETE') {
         const idValue = data.Id || data.id || data.ID;
@@ -300,11 +300,9 @@ export class TablesComponent implements OnInit, OnDestroy {
 
       if (typeof err.error === 'string') {
         errorMessage = err.error;
-      }
-      else if (err.error && err.error.message) {
+      } else if (err.error && err.error.message) {
         errorMessage = err.error.message;
-      }
-      else if (err.error && err.error.errors) {
+      } else if (err.error && err.error.errors) {
         errorMessage = Object.values(err.error.errors).flat().join('\n');
       }
 
@@ -314,4 +312,9 @@ export class TablesComponent implements OnInit, OnDestroy {
     this.pendingAction = null;
     this.isNewRecordMode = false;
   }
+
+  // openAuditLog() {
+  //   this.showAuditLog = true;
+  //   this.selectedTableForColumnSearch = null;
+  // }
 }

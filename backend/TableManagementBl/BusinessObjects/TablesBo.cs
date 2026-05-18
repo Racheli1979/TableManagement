@@ -233,5 +233,21 @@ namespace TableManagementBl.BusinessObjects
                     throw new ArgumentException($"בשדה '{columnName}' חובה להזין מספר תקין.");
             }
         }
+
+        // public async Task<IEnumerable<dynamic>> GetAuditLogs(string? userFilter = null, DateTime? dateFrom = null)
+        // {
+        //     try
+        //     {
+        //         return await _tablesDo.GetAuditLogs(userFilter, dateFrom);
+        //     }
+        //     catch (SqlException ex)
+        //     {
+        //         if (ex.Number >= 50000) 
+        //         {
+        //             throw new ArgumentException(ex.Message);
+        //         }
+        //         throw new Exception("שגיאה בשליפת יומן הפעולות: " + ex.Message);
+        //     }
+        // }
     }    
 }

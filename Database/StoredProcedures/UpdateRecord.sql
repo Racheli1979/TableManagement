@@ -1,19 +1,16 @@
 GO
-ALTER PROCEDURE UpdateRecord
+CREATE PROCEDURE UpdateRecord
     @TableName NVARCHAR(128),
     @IdValue NVARCHAR(MAX), 
-    @NewDataJson NVARCHAR(MAX), -- מקבל אובייקט JSON עם כל השדות ששונו
+    @NewDataJson NVARCHAR(MAX),
     @UpdateUser NVARCHAR(128),
     @Reason NVARCHAR(MAX) 
 AS
 BEGIN
     SET NOCOUNT ON;
 
-    -- 1. ואלידציה לסיבת השינוי (כמו במקור שלך)
     EXEC ValidateColumnData @TableName = 'AuditLog', @ColumnName = 'Reason', @Value = @Reason;
 
-    -- 2. לולאת ואלידציה על כל העמודות שהגיעו ב-JSON
-    -- אנחנו עוברים על ה-JSON ובודקים כל עמודה וערך מול ה-ValidateColumnData שלך
     DECLARE @ColName NVARCHAR(128);
     DECLARE @ColVal NVARCHAR(MAX);
 
@@ -24,7 +21,6 @@ BEGIN
     FETCH NEXT FROM val_cursor INTO @ColName, @ColVal;
     WHILE @@FETCH_STATUS = 0
     BEGIN
-        -- הפעלת האבטחה המקורית שלך על כל עמודה בנפרד
         EXEC ValidateColumnData @TableName, @ColName, @ColVal;
         FETCH NEXT FROM val_cursor INTO @ColName, @ColVal;
     END

@@ -6,18 +6,18 @@ $text-main: #1e293b;
 
 .app-layout {
   display: flex;
-  height: 100vh;      
-  width: 100vw;       
+  height: 100vh;
+  width: 100vw;
   direction: rtl;
-  font-family: 'Segoe UI', Tahoma, sans-serif;
+  font-family: "Segoe UI", Tahoma, sans-serif;
   background-color: #f8fafc;
-  overflow: hidden;   
+  overflow: hidden;
 }
 
 .sidebar {
   width: 280px;
   min-width: 280px;
-  height: 100%;       
+  height: 100%;
   background-color: $sidebar-bg;
   border-left: 1px solid $border-color;
   display: flex;
@@ -78,10 +78,26 @@ $text-main: #1e293b;
       font-weight: 600;
     }
 
+  
     &.audit-log {
       background-color: #e0f2fe;
       border: 1px solid #bae6fd;
       margin-bottom: 15px;
+      color: #0369a1; 
+
+      // &.active {
+      //   background-color: #0099ff; 
+      //   color: white; 
+      //   border-color: #007acc;
+      //   font-weight: 600;
+      //   box-shadow: 0 4px 12px rgba(0, 153, 255, 0.2);
+
+      //   i,
+      //   span,
+      //   mat-icon {
+      //     color: white !important;
+      //   }
+      // }
     }
   }
 }
@@ -90,13 +106,13 @@ $text-main: #1e293b;
   flex: 1;
   display: flex;
   flex-direction: column;
-  height: 100%;      
+  height: 100%;
   padding: 30px;
   box-sizing: border-box;
-  overflow: hidden;  
+  overflow: hidden;
 
   .content-header {
-    flex-shrink: 0;  
+    flex-shrink: 0;
     display: flex;
     justify-content: space-between;
     align-items: center;
@@ -135,14 +151,14 @@ $text-main: #1e293b;
   box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
   display: flex;
   flex-direction: column;
-  flex: 1;            
-  overflow: hidden;   
+  flex: 1;
+  overflow: hidden;
 }
 
 .table-responsive {
   flex: 1;
   width: 100%;
-  overflow: auto;    
+  overflow: auto;
 }
 
 .data-table {
@@ -152,7 +168,7 @@ $text-main: #1e293b;
   text-align: center;
 
   thead {
-    position: sticky; 
+    position: sticky;
     top: 0;
     z-index: 10;
     background-color: #f1f5f9;
@@ -297,7 +313,10 @@ $text-main: #1e293b;
     border: 1px solid #cbd5e1;
     border-radius: 6px;
     outline: none;
-    &:focus { border-color: #007bff; box-shadow: 0 0 0 2px rgba(0,123,255,0.1); }
+    &:focus {
+      border-color: #007bff;
+      box-shadow: 0 0 0 2px rgba(0, 123, 255, 0.1);
+    }
   }
 }
 
@@ -305,16 +324,16 @@ $text-main: #1e293b;
   display: flex;
   align-items: center;
   gap: 4px;
-  white-space: nowrap; 
+  white-space: nowrap;
 
   .fk-id {
-    color: #6f42c1; 
+    color: #6f42c1;
     font-weight: 500;
     font-size: 0.9em;
   }
 
   .fk-display {
-    color: #6f42c1; 
+    color: #6f42c1;
     font-size: 0.85em;
     font-weight: 500;
   }
