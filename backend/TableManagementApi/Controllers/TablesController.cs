@@ -147,6 +147,28 @@ namespace TableManagementApi.Controllers
             }
         }
 
+        [HttpGet("permissions")]
+        public async Task<IActionResult> GetTablePermissions([FromQuery] string tableName, [FromQuery] string userName)
+        {
+            try
+            {
+                var permissions = await _tablesBo.GetTablePermissions(tableName, userName);
+                return Ok(permissions);
+            }
+            catch (ArgumentException ex)
+            {
+                return BadRequest(new { message = ex.Message });
+            }
+            catch (UnauthorizedAccessException ex)
+            {
+                return StatusCode(403, new { message = ex.Message });
+            }
+            catch (Exception ex)
+            {
+                return StatusCode(500, new { message = "שגיאת שרת פנימית בבדיקת הרשאות", details = ex.Message });
+            }
+        }
+
         // [HttpGet("audit-logs")]
         // public async Task<IActionResult> GetAuditLogs([FromQuery] string? user, [FromQuery] DateTime? dateFrom)
         // {
