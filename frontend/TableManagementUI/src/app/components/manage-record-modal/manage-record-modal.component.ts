@@ -72,6 +72,15 @@ export class ManageRecordModalComponent implements OnInit {
   ngOnInit() {
     if (this.isNewRecord) {
       this.localRecord = {};
+      if (this.table && this.table.columns) {
+      this.table.columns.forEach((col) => { 
+        const colType = col.dataType?.toLowerCase() || '';
+        
+        if (colType.includes('date')) {
+          this.localRecord[col.columnName] = new Date().toISOString().split('T')[0];
+        }
+      });
+    }
     } else {
       this.localRecord = JSON.parse(JSON.stringify(this.record));
 
@@ -122,7 +131,7 @@ export class ManageRecordModalComponent implements OnInit {
       value === undefined ||
       String(value).toLowerCase() === 'null'
     ) {
-      return ''; 
+      return '';
     }
     const type = dataType?.toLowerCase() || '';
     if (type.includes('date') && value) {
@@ -133,6 +142,9 @@ export class ManageRecordModalComponent implements OnInit {
 
   saveTransform(newValue: any, dataType: string): any {
     const type = dataType?.toLowerCase() || '';
+    if (type.includes('date') && newValue) {
+      return new Date(newValue).toISOString();
+    }
     if (type === 'int') return parseInt(newValue) || 0;
     if (type === 'decimal' || type === 'float')
       return parseFloat(newValue) || 0;
