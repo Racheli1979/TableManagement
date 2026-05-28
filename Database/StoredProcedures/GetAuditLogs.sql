@@ -7,10 +7,9 @@
 
 --     IF @p_user_filter IS NOT NULL
 --     BEGIN
---         EXEC ValidateColumnData 
---             @TableName = 'AuditLog', 
---             @ColumnName = 'UserName', 
---             @Value = @p_user_filter;
+--         DECLARE @JsonValidation NVARCHAR(MAX) = (SELECT @p_user_filter AS [UserName] FOR JSON PATH, WITHOUT_ARRAY_WRAPPER);
+
+--         EXEC ValidateColumnData @TableName = 'AuditLog', @JsonValues = @JsonValidation;
 --     END
 
 --     SELECT 

@@ -8,18 +8,17 @@ AS
 BEGIN
     SET NOCOUNT ON;
 
-    DECLARE @SQL NVARCHAR(MAX);
-    DECLARE @JoinSQL NVARCHAR(MAX) = '';
-    DECLARE @SelectSQL NVARCHAR(MAX) = 'SELECT t.*';
-    DECLARE @WhereClause NVARCHAR(MAX) = '1=1';
-    DECLARE @Offset INT = (@PageNumber - 1) * @PageSize;
-    DECLARE @ParamDefinition NVARCHAR(500) = N'@Value NVARCHAR(110), @Offset INT, @PageSize INT';
-
     IF NOT EXISTS (SELECT 1 FROM sys.tables WHERE name = @TableName)
     BEGIN
         RAISERROR('Table does not exist', 16, 1);
         RETURN;
     END
+
+    DECLARE @SQL NVARCHAR(MAX);
+    DECLARE @JoinSQL NVARCHAR(MAX) = '';
+    DECLARE @SelectSQL NVARCHAR(MAX) = 'SELECT t.*';
+    DECLARE @WhereClause NVARCHAR(MAX) = '1=1';
+    DECLARE @Offset INT = (@PageNumber - 1) * @PageSize;
 
     SELECT 
         @JoinSQL = @JoinSQL + CHAR(13) + 
@@ -49,20 +48,17 @@ BEGIN
             )
             FROM INFORMATION_SCHEMA.COLUMNS
             WHERE TABLE_NAME = @TableName 
-              AND (TABLE_SCHEMA = 'dbo' OR TABLE_SCHEMA = (SELECT SCHEMA_NAME()))
-              AND DATA_TYPE IN ('char', 'varchar', 'nchar', 'nvarchar', 'int', 'decimal');
+              AND DATA_TYPE IN ('char', 'varchar', 'nchar', 'nvarchar', 'int', 'decimal', 'date', 'datetime');
         END
     END
 
-    SET @SQL = @SelectSQL + 
-               ' FROM ' + QUOTENAME(@TableName) + ' AS t ' + 
-               @JoinSQL + 
-               ' WHERE ' + @WhereClause + 
-               ' ORDER BY (SELECT NULL) ' + 
-               ' OFFSET @Offset ROWS FETCH NEXT @PageSize ROWS ONLY';
+    SET @SQL = @SelectSQL + ' FROM ' + QUOTENAME(@TableName) + ' AS t ' + @JoinSQL + ' WHERE ' + @WhereClause + 
+               ' ORDER BY (SELECT NULL) OFFSET @Offset ROWS FETCH NEXT @PageSize ROWS ONLY';
 
-    DECLARE @FullSearchValue NVARCHAR(110) = '%' + @SearchValue + '%';
+    DECLARE @ParamDefinition NVARCHAR(500) = N'@Value NVARCHAR(110), @Offset INT, @PageSize INT';
+    DECLARE @FullSearchValue NVARCHAR(110) = N'%' + @SearchValue + N'%';
+
     EXEC sp_executesql @SQL, @ParamDefinition, 
-         @Value = @FullSearchValue, @Offset = @Offset, @PageSize = @PageSize;
+                       @Value = @FullSearchValue, @Offset = @Offset, @PageSize = @PageSize;
 END
-GO 
+GO

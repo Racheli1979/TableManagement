@@ -1,4 +1,3 @@
-GO
 CREATE PROCEDURE GetTablePermissions
     @TableName NVARCHAR(128),
     @UserName NVARCHAR(128)
@@ -6,23 +5,20 @@ AS
 BEGIN
     SET NOCOUNT ON;
 
-    DECLARE @UpperTable NVARCHAR(128) = UPPER(@TableName);
+    DECLARE @JsonValidation NVARCHAR(MAX) = (
+        SELECT @TableName AS [TableName], @UserName AS [UserName] 
+        FOR JSON PATH, WITHOUT_ARRAY_WRAPPER
+    );
+    EXEC ValidateColumnData @TableName = 'UserPermissions', @JsonValues = @JsonValidation;
 
-    EXEC ValidateColumnData @TableName = @TableName, @ColumnName = 'TableName', @Value = @TableName;
-    EXEC ValidateColumnData @TableName = @TableName, @ColumnName = 'UserName', @Value = @UserName;
-
-    IF NOT EXISTS (
-        SELECT 1 
-        FROM INFORMATION_SCHEMA.TABLES 
-        WHERE UPPER(TABLE_NAME) = @UpperTable
-    )
+    IF NOT EXISTS (SELECT 1 FROM sys.tables WHERE name = @TableName)
     BEGIN
-        RAISERROR ('Table does not exist.', 16, 1);
-        RETURN;
+        ;THROW 50002, 'Validation Error: Table does not exist.', 1;
     END
 
     SELECT CanView, CanAdd, CanEdit, CanDelete
     FROM UserPermissions
-    WHERE UPPER(TableName) = @UpperTable AND UPPER(UserName) = UPPER(@UserName);
-END;
+    WHERE TableName = @TableName 
+      AND UserName = @UserName;
+END
 GO

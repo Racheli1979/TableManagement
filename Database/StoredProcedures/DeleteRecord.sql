@@ -1,4 +1,3 @@
-GO
 CREATE PROCEDURE DeleteRecord
     @TableName NVARCHAR(128),
     @RecordId NVARCHAR(450),
@@ -7,74 +6,52 @@ CREATE PROCEDURE DeleteRecord
 AS
 BEGIN
     SET NOCOUNT ON;
-    DECLARE @Sql NVARCHAR(MAX);
+    
+    EXEC ValidateColumnData @TableName = 'AuditLog', @JsonValues = '{"Reason": "Checked"}'; 
+
     DECLARE @PKColumnName NVARCHAR(128);
     DECLARE @OldData NVARCHAR(MAX); 
+    DECLARE @Sql NVARCHAR(MAX);
 
-    EXEC ValidateColumnData @TableName = 'AuditLog', @ColumnName = 'Reason', @Value = @Reason;
+    SELECT TOP 1 @PKColumnName = QUOTENAME(c.name)
+    FROM sys.index_columns ic
+    JOIN sys.columns c ON ic.object_id = c.object_id AND ic.column_id = c.column_id
+    WHERE ic.object_id = OBJECT_ID(@TableName) AND ic.key_ordinal = 1;
 
+    IF @PKColumnName IS NULL
+    BEGIN
+        RAISERROR('Table not found or has no Primary Key.', 16, 1);
+        RETURN;
+    END
+
+    BEGIN TRANSACTION;
     BEGIN TRY
-        IF NOT EXISTS (SELECT 1 FROM INFORMATION_SCHEMA.TABLES WHERE TABLE_NAME = @TableName)
+        SET @Sql = N'SELECT @Result = (SELECT * FROM ' + QUOTENAME(@TableName) + 
+                   N' WHERE ' + @PKColumnName + N' = @Id FOR JSON PATH, WITHOUT_ARRAY_WRAPPER)';
+        
+        EXEC sp_executesql @Sql, N'@Id NVARCHAR(450), @Result NVARCHAR(MAX) OUTPUT', 
+                           @Id = @RecordId, @Result = @OldData OUTPUT;
+
+        IF @OldData IS NULL
         BEGIN
-            RAISERROR('Table not found in database.', 16, 1);
-            RETURN;
+            RAISERROR('Record not found.', 16, 1);
         END
 
-        SELECT TOP 1 @PKColumnName = c.name
-        FROM sys.indexes i
-        INNER JOIN sys.index_columns ic ON i.object_id = ic.object_id AND i.index_id = ic.index_id
-        INNER JOIN sys.columns c ON ic.object_id = c.object_id AND ic.column_id = c.column_id
-        WHERE i.is_primary_key = 1 AND OBJECT_NAME(i.object_id) = @TableName;
-
-        SET @Sql = N'SET @Result = (SELECT * FROM ' + QUOTENAME(@TableName) + 
-                   N' WHERE ' + QUOTENAME(@PKColumnName) + ' = @Id FOR JSON PATH, WITHOUT_ARRAY_WRAPPER)';
-        EXEC sp_executesql @Sql, N'@Id NVARCHAR(450), @Result NVARCHAR(MAX) OUTPUT', @Id = @RecordId, @Result = @OldData OUTPUT;
-
-        SET @Sql = 'DELETE FROM ' + QUOTENAME(@TableName) + 
-                   ' WHERE ' + QUOTENAME(@PKColumnName) + ' = @Id';
-
+        SET @Sql = N'DELETE FROM ' + QUOTENAME(@TableName) + N' WHERE ' + @PKColumnName + N' = @Id';
         EXEC sp_executesql @Sql, N'@Id NVARCHAR(450)', @Id = @RecordId;
 
-        IF @@ROWCOUNT = 0
-        BEGIN
-            RAISERROR('Record not found or already deleted.', 16, 1);
-        END
-        ELSE
-        BEGIN
+        INSERT INTO AuditLog (TableName, RecordId, Action, UserName, ChangeDate, Reason, OldValues)
+        VALUES (@TableName, @RecordId, 'DELETE', @UpdateUser, GETDATE(), @Reason, @OldData);
 
-            INSERT INTO AuditLog (
-                TableName, 
-                RecordId, 
-                Action, 
-                UserName, 
-                ChangeDate, 
-                Reason, 
-                OldValues, 
-                NewValues
-            )
-            VALUES (
-                @TableName, 
-                @RecordId, 
-                'DELETE', 
-                @UpdateUser, 
-                GETDATE(), 
-                @Reason, 
-                @OldData, 
-                NULL
-            );
-        END
-        
+        COMMIT TRANSACTION;
     END TRY
     BEGIN CATCH
+        IF @@TRANCOUNT > 0 ROLLBACK TRANSACTION;
+        
         IF ERROR_NUMBER() = 547
-        BEGIN
-            RAISERROR('Cannot delete record: It is linked to other data (Foreign Key constraint).', 16, 1);
-        END
+            RAISERROR('Cannot delete: Record is linked to other data.', 16, 1);
         ELSE
-        BEGIN
-            DECLARE @ErrorMessage NVARCHAR(4000) = ERROR_MESSAGE();
-            RAISERROR(@ErrorMessage, 16, 1);
-        END
+            THROW;
     END CATCH
 END
 GO
