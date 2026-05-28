@@ -60,6 +60,3 @@ npm run front-format
 ## 📝 Compliance & Maintenance
 * **Legacy Support:** A specific user (`acn_hasava_load`) is maintained for large-scale data migrations; its permissions are strictly monitored.
 * **Migration Strategy:** All data-centric logic resides in Stored Procedures, ensuring a seamless transition path from SQL Server to Oracle in the future.
-
----
-*Developed for Table Management System - May 2026*
