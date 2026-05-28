@@ -49,6 +49,8 @@ namespace TableManagementDal.DataObjects
 
         public async Task<int> AddTableRecord(string tableName, string jsonData, string user, string reason)
         {
+            if (string.IsNullOrWhiteSpace(tableName) || tableName.Any(c => !char.IsLetterOrDigit(c) && c != '_'))
+                throw new ArgumentException("שם טבלה לא תקין או מכיל תווים אסורים.");
             using var connection = new SqlConnection(_connectionString);
             
             var parameters = new DynamicParameters();
@@ -86,6 +88,9 @@ namespace TableManagementDal.DataObjects
 
         public async Task<int> DeleteRecord(string tableName, string id, string user, string reason)
         {
+            if (string.IsNullOrWhiteSpace(tableName) || tableName.Any(c => !char.IsLetterOrDigit(c) && c != '_'))
+                throw new ArgumentException("שם טבלה לא תקין או מכיל תווים אסורים.");
+
             using var connection = new SqlConnection(_connectionString);
             
             var parameters = new DynamicParameters();
