@@ -1,12 +1,7 @@
 import { Component, OnInit, OnDestroy } from '@angular/core';
-import {
-  TablesService,
-  Table,
-  Column,
-  TablePermissions,
-} from '../../services/tables.service';
-import { Subject, Subscription, firstValueFrom } from 'rxjs';
-import { debounceTime, distinctUntilChanged } from 'rxjs/operators';
+import { TablesService, Table } from '../../services/tables.service';
+import { PermissionsService } from '../../services/permissions.service';
+import { firstValueFrom } from 'rxjs';
 
 @Component({
   selector: 'app-tables',
@@ -14,145 +9,41 @@ import { debounceTime, distinctUntilChanged } from 'rxjs/operators';
   styleUrls: ['./tables.component.scss'],
 })
 export class TablesComponent implements OnInit, OnDestroy {
-  allTables: Table[] = [];
-  filteredTables: Table[] = [];
-  visibleColumns: Column[] = [];
-  searchTermTable: string = '';
-
   showAuditLog: boolean = false;
-  auditData: any[] = [];
-
   selectedTableForColumnSearch: Table | null = null;
   selectedRecord: any = null;
   selectedTableForEdit: Table | null = null;
-
-  globalSearch: string = '';
-  columnFilters: { [key: string]: string } = {};
-
-  currentPermissions: TablePermissions = {
-    canView: false,
-    canAdd: false,
-    canEdit: false,
-    canDelete: false,
-  };
-
-  // 👤 שם המשתמש המחובר כרגע במערכת
-  readonly currentLoggedInUser: string = 'Manager';
-
-  private tableSearchSubject = new Subject<string>();
-  private subscriptions: Subscription[] = [];
-
   isNewRecordMode: boolean = false;
+  showReasonModal = false;
+  reasonModalData: any = {};
+  pendingAction: { type: 'ADD' | 'UPDATE' | 'DELETE'; data: any } | null = null;
 
-  constructor(private tablesService: TablesService) {}
+  constructor(
+    private tablesService: TablesService,
+    public permissionsService: PermissionsService,
+  ) {}
 
-  ngOnInit(): void {
-    this.loadInitialData();
+  ngOnInit(): void {}
 
-    this.subscriptions.push(
-      this.tableSearchSubject
-        .pipe(debounceTime(200), distinctUntilChanged())
-        .subscribe((term) => {
-          if (!term || term.trim() === '') {
-            this.filteredTables = [...this.allTables];
-            this.selectedTableForColumnSearch = null;
-            this.showAuditLog = false;
-            this.allTables.forEach((t) => (t.rowData = undefined));
-            return;
-          }
-
-          const filtered = this.allTables.filter((t) =>
-            t.tableName.toLowerCase().includes(term.toLowerCase()),
-          );
-
-          this.filteredTables = filtered;
-
-          if (filtered.length === 1) {
-            this.toggleTable(filtered[0]);
-          }
-        }),
-    );
-  }
-
-  loadInitialData() {
-    this.tablesService.getTables().subscribe({
-      next: (data: any[]) => {
-        this.allTables = data.map((t) => ({
-          tableName: t.tableName || t.TableName,
-          schemaName: t.schemaName || t.SchemaName,
-          objectType: t.objectType || t.ObjectType,
-          columns: (t.columns || t.Columns || []).map((c: any) => ({
-            columnName: c.columnName || c.ColumnName,
-            dataType: c.dataType || c.DataType,
-            isNullable: c.isNullable || c.IsNullable,
-            maxLength: c.maxLength || c.MaxLength,
-            isForeignKey: c.isForeignKey || c.IsForeignKey,
-            relatedTable: c.relatedTable || c.RelatedTable,
-          })),
-        }));
-        this.filteredTables = [...this.allTables];
-      },
-      error: (err) => {
-        alert('שגיאה בטעינת הטבלאות: ' + (err.error?.message || 'תקלת תקשורת'));
-      },
-    });
-  }
-
-  onTableSearchInput() {
-    this.tableSearchSubject.next(this.searchTermTable);
-  }
-
-  toggleTable(table: Table): void {
+  toggleTable(table: Table | null): void {
+    if (!table) {
+      this.selectedTableForColumnSearch = null;
+      return;
+    }
     this.showAuditLog = false;
     this.selectedTableForColumnSearch = table;
 
-    const auditFields = [
-      'CREATE_USER',
-      'CREATE_DATE',
-      'UPDATE_USER',
-      'UPDATE_DATE',
-    ];
-    this.visibleColumns = [...table.columns].sort((a, b) => {
-      const isAAudit = auditFields.includes(a.columnName.toUpperCase());
-      const isBAudit = auditFields.includes(b.columnName.toUpperCase());
-      return (isAAudit ? 1 : 0) - (isBAudit ? 1 : 0);
-    });
-
-    this.currentPermissions = {
-      canView: false,
-      canAdd: false,
-      canEdit: false,
-      canDelete: false,
-    };
-
-    this.tablesService
-      .getTablePermissions(table.tableName, this.currentLoggedInUser)
-      .subscribe({
-        next: (perms: any) => {
-          this.currentPermissions = {
-            canView: perms.CanView ?? perms.canView ?? false,
-            canAdd: perms.CanAdd ?? perms.canAdd ?? false,
-            canEdit: perms.CanEdit ?? perms.canEdit ?? false,
-            canDelete: perms.CanDelete ?? perms.canDelete ?? false,
-          };
-
-          if (!this.currentPermissions.canView) {
-            table.rowData = [];
-            alert(`אין לך הרשאת צפייה בטבלה ${table.tableName}`);
-            return;
-          }
-
-          this.loadTableData(table);
-        },
-        error: (err) => {
-          console.error('Error fetching permissions:', err);
-          alert(
-            'שגיאה בבדיקת הרשאות אבטחה: ' +
-              (err.error?.message || 'גישה נדחתה'),
-          );
+    this.permissionsService.getTablePermissions(table.tableName).subscribe({
+      next: (perms) => {
+        if (!perms.canView) {
           table.rowData = [];
-        },
-      });
+          alert(`אין לך הרשאת צפייה בטבלה ${table.tableName}`);
+          return;
+        }
+        this.loadTableData(table);
+      },
+      error: (err) => console.error('Error fetching permissions:', err),
+    });
   }
 
   private loadTableData(table: Table): void {
@@ -161,122 +52,73 @@ export class TablesComponent implements OnInit, OnDestroy {
       ColumnName: table.columns[0]?.columnName || '',
       SearchValue: '',
     };
-
     this.tablesService.searchInTable(request).subscribe({
-      next: (data: any) => {
-        table.rowData = data;
-      },
+      next: (data: any) => (table.rowData = data),
       error: (err) => {
-        console.error('Search Error:', err);
-        const errorMessage =
-          err.error?.message || err.error || 'שגיאה בשליפת נתונים';
-        alert(`שים לב: ${errorMessage}`);
+        alert(`שים לב: ${err.error?.message || 'שגיאה בשליפת נתונים'}`);
         table.rowData = [];
       },
     });
   }
 
-  getFilteredRows(): any[] {
-    let rows = this.selectedTableForColumnSearch?.rowData || [];
-
-    if (this.globalSearch) {
-      const search = this.globalSearch.toLowerCase();
-      rows = rows.filter((row) =>
-        this.selectedTableForColumnSearch!.columns.some((col) => {
-          const val = row[col.columnName]?.toString().toLowerCase() || '';
-          const displayVal =
-            row[col.columnName + '_Display']?.toString().toLowerCase() || '';
-          return val.includes(search) || displayVal.includes(search);
-        }),
-      );
-    }
-    const filterKeys = Object.keys(this.columnFilters);
-    if (filterKeys.length > 0) {
-      rows = rows.filter((row) => {
-        return filterKeys.every((colName) => {
-          const filterValue = this.columnFilters[colName]?.toLowerCase();
-          if (!filterValue) return true;
-
-          const originalValue = row[colName]?.toString().toLowerCase() || '';
-          const displayValue =
-            row[colName + '_Display']?.toString().toLowerCase() || '';
-
-          return (
-            originalValue.includes(filterValue) ||
-            displayValue.includes(filterValue)
-          );
-        });
-      });
-    }
-
-    return rows;
+  onRowActionFromGrid(event: any) {
+    if (event.type === 'EDIT') this.openEditModal(event.data);
+    else if (event.type === 'DELETE') this.onDelete(event.data);
   }
 
   openEditModal(row: any) {
-    if (!this.currentPermissions.canEdit) {
+    if (!this.permissionsService.permissions.canEdit) {
       alert('אין לך הרשאה לערוך רשומות בטבלה זו');
       return;
     }
     this.isNewRecordMode = false;
-    this.selectedRecord = { ...row };
-    this.selectedTableForEdit = this.selectedTableForColumnSearch;
-  }
+    const cleanedRow = { ...row };
 
-  handleSave(updatedData: any) {
-    console.log('נתונים לשמירה:', updatedData);
-
-    if (this.selectedTableForEdit) {
-      this.selectedRecord = null;
-      alert('הפעולה בוצעה בהצלחה');
-      this.toggleTable(this.selectedTableForEdit);
+    if (this.selectedTableForColumnSearch?.columns) {
+      this.selectedTableForColumnSearch.columns.forEach((col) => {
+        if (
+          col.dataType?.toLowerCase().includes('date') &&
+          cleanedRow[col.columnName]
+        ) {
+          cleanedRow[col.columnName] = cleanedRow[col.columnName]
+            .toString()
+            .split('T')[0];
+        }
+      });
     }
-  }
 
-  ngOnDestroy() {
-    this.subscriptions.forEach((s) => s.unsubscribe());
+    this.selectedRecord = cleanedRow;
+    this.selectedTableForEdit = this.selectedTableForColumnSearch;
   }
 
   openAddModal() {
-    if (!this.currentPermissions.canAdd) {
-      alert('אין לך הרשאה להוסיף רשומות לטבלה זו');
-      return;
-    }
+    if (!this.permissionsService.permissions.canAdd) return;
     this.isNewRecordMode = true;
     this.selectedTableForEdit = this.selectedTableForColumnSearch;
     this.selectedRecord = {};
-    console.log('Table for add:', this.selectedTableForEdit);
   }
-
-  showReasonModal = false;
-  reasonModalData: any = {};
-  pendingAction: { type: 'ADD' | 'UPDATE' | 'DELETE'; data: any } | null = null;
 
   handleDataFromManage(data: any) {
     this.pendingAction = {
       type: this.isNewRecordMode ? 'ADD' : 'UPDATE',
-      data: data,
+      data,
     };
-
     this.reasonModalData = {
       title: this.isNewRecordMode ? 'הוספת רשומה' : 'עריכת רשומה',
-      description: 'נא להזין סיבה לשינוי המידע בטבלה',
+      description: 'נא להזין סיבה לשינוי המידע',
       actionName: this.isNewRecordMode ? 'הוסף' : 'שמור',
       minLength: 5,
     };
-
     this.selectedRecord = null;
     this.showReasonModal = true;
   }
 
   onDelete(row: any) {
-    if (!this.currentPermissions.canDelete) {
-      alert('אין לך הרשאה למחוק רשומות מטבלה זו');
-      return;
-    }
+    if (!this.permissionsService.permissions.canDelete) return;
     this.pendingAction = { type: 'DELETE', data: row };
     this.reasonModalData = {
       title: 'מחיקת רשומה',
-      description: 'נא להזין סיבה למחיקת הרשומה מהמערכת',
+      description: 'נא להזין סיבה למחיקה',
       actionName: 'מחק',
       minLength: 5,
     };
@@ -285,100 +127,82 @@ export class TablesComponent implements OnInit, OnDestroy {
 
   async finalizeAction(reasonText: string) {
     if (!this.pendingAction || !this.selectedTableForColumnSearch) return;
-
     const { type, data } = this.pendingAction;
-    const tableName = this.selectedTableForColumnSearch.tableName;
     this.showReasonModal = false;
 
     try {
-      if (type === 'ADD') {
-        await firstValueFrom(
-          this.tablesService.addRecord({
-            tableName,
-            recordData: data,
-            updateUser: this.currentLoggedInUser,
-            reason: reasonText,
-          }),
-        );
-      } else if (type === 'UPDATE') {
-        const idValue = String(data['Id'] || data['ID'] || data['id']);
-
-        const forbiddenFields = [
-          'Id',
-          'ID',
-          'id',
-          'CREATE_DATE',
-          'CREATE_USER',
-          'UPDATE_DATE',
-          'UPDATE_USER',
-        ];
-
-        const updatedFields: { [key: string]: any } = {};
-
-        this.selectedTableForColumnSearch.columns.forEach((col) => {
-          const colName = col.columnName;
-          if (
-            !forbiddenFields.includes(colName) &&
-            !colName.endsWith('_Display')
-          ) {
-            const newValue = data[colName];
-            const originalValue = data[colName + '_Original'];
-
-            if (String(newValue) !== String(originalValue || '')) {
-              updatedFields[colName] = newValue;
-            }
-          }
-        });
-
-        if (Object.keys(updatedFields).length === 0) {
-          alert('לא בוצעו שינויים ברשומה');
-          return;
-        }
-
-        await firstValueFrom(
-          this.tablesService.updateRecord({
-            TableName: tableName,
-            IdValue: idValue,
-            UpdateUser: this.currentLoggedInUser,
-            Reason: reasonText,
-            UpdatedData: updatedFields,
-          } as any),
-        );
-      } else if (type === 'DELETE') {
-        const idValue = data.Id || data.id || data.ID;
-        await firstValueFrom(
-          this.tablesService.deleteRecord({
-            tableName,
-            id: idValue,
-            updateUser: this.currentLoggedInUser,
-            reason: reasonText,
-          }),
-        );
-      }
+      if (type === 'ADD') await this.executeAdd(data, reasonText);
+      else if (type === 'UPDATE') await this.executeUpdate(data, reasonText);
+      else if (type === 'DELETE') await this.executeDelete(data, reasonText);
 
       alert('הפעולה בוצעה בהצלחה');
       this.toggleTable(this.selectedTableForColumnSearch);
     } catch (err: any) {
-      console.error('Finalize Error:', err);
-      let errorMessage = 'הפעולה נכשלה בשרת';
-
-      if (typeof err.error === 'string') {
-        errorMessage = err.error;
-      } else if (err.error && err.error.message) {
-        errorMessage = err.error.message;
-      } else if (err.error && err.error.errors) {
-        errorMessage = Object.values(err.error.errors).flat().join('\n');
-      }
-
-      alert(errorMessage);
+      alert(err.error?.message || 'הפעולה נכשלה');
     }
+    this.resetState();
+  }
+
+  private async executeAdd(data: any, reason: string) {
+    const d = this.cleanAudit(data);
+    await firstValueFrom(
+      this.tablesService.addRecord({
+        tableName: this.selectedTableForColumnSearch!.tableName,
+        recordData: d,
+        updateUser: this.permissionsService.currentUser, 
+        reason,
+      }),
+    );
+  }
+
+  private async executeUpdate(data: any, reason: string) {
+    const idValue = String(data['Id'] || data['ID'] || data['id']);
+    const updatedFields: any = {};
+    this.selectedTableForColumnSearch!.columns.forEach((col) => {
+      if (data[col.columnName] !== data[col.columnName + '_Original'])
+        updatedFields[col.columnName] = data[col.columnName];
+    });
+    await firstValueFrom(
+      this.tablesService.updateRecord({
+        TableName: this.selectedTableForColumnSearch!.tableName,
+        IdValue: idValue,
+        UpdateUser: this.permissionsService.currentUser, 
+        Reason: reason,
+        UpdatedData: updatedFields,
+      }),
+    );
+  }
+
+  private async executeDelete(data: any, reason: string) {
+    await firstValueFrom(
+      this.tablesService.deleteRecord({
+        tableName: this.selectedTableForColumnSearch!.tableName,
+        id: data.Id || data.id || data.ID,
+        updateUser: this.permissionsService.currentUser, 
+        reason,
+      }),
+    );
+  }
+
+  private cleanAudit(data: any) {
+    const d = { ...data };
+    ['CREATE_DATE', 'CREATE_USER', 'UPDATE_DATE', 'UPDATE_USER'].forEach(
+      (f) => delete d[f],
+    );
+    return d;
+  }
+
+  private resetState() {
     this.showReasonModal = false;
     this.pendingAction = null;
     this.isNewRecordMode = false;
+    this.selectedRecord = null;
   }
 
   // openAuditLog() {
   //   this.showAuditLog = true;
   //   this.selectedTableForColumnSearch = null;
   // }
+
+  ngOnDestroy() {}
 }

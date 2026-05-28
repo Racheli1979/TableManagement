@@ -1,0 +1,39 @@
+<aside class="sidebar">
+  <div class="sidebar-header">
+    <span class="db-icon">🗄️</span>
+    <span class="header-text">בסיס נתונים ({{ allTables.length }})</span>
+  </div>
+
+  <div class="search-box">
+    <input
+      type="text"
+      placeholder="סינון טבלאות לפי שם..."
+      [(ngModel)]="searchTermTable"
+      (input)="onTableSearchInput()"
+    />
+  </div>
+
+  <nav class="sidebar-menu">
+    <div
+      class="menu-item audit-log"
+      [class.active]="showAuditLog"
+      (click)="onAuditLogClick()" 
+    >
+      <span class="icon">🕒</span>
+      <span class="title">יומן פעולות (Audit Log)</span>
+    </div>
+
+    <div class="menu-section-title">רשימת טבלאות</div>
+    <div class="table-list-container">
+      <div
+        *ngFor="let table of filteredTables"
+        class="menu-item table-link"
+        [class.active]="selectedTable?.tableName === table.tableName && !showAuditLog"
+        (click)="onTableClick(table)"
+      >
+        <span class="list-icon">≡</span>
+        {{ table.tableName }}
+      </div>
+    </div>
+  </nav>
+</aside>

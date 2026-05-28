@@ -1,12 +1,12 @@
 <div class="modal-overlay" (click)="onClose()">
   <div class="modal-container" (click)="$event.stopPropagation()">
-
     <header class="modal-header">
       <div class="header-content">
-        <span class="edit-icon">{{ isNewRecord ? '➕' : '✏️' }}</span>
+        <span class="edit-icon">{{ isNewRecord ? "➕" : "✏️" }}</span>
         <h2>
-          {{ isNewRecord ? 'הוספת רשומה חדשה' : 'עריכת רשומה' }} -
-          טבלת "{{ table?.tableName }}"
+          {{ isNewRecord ? "הוספת רשומה חדשה" : "עריכת רשומה" }} - טבלת "{{
+            table?.tableName
+          }}"
         </h2>
       </div>
     </header>
@@ -15,38 +15,87 @@
       <form #editForm="ngForm">
         <div class="fields-grid">
           <div class="form-item" *ngFor="let col of getEditableColumns()">
-
             <label [for]="col.columnName" class="field-label">
               <span *ngIf="isRequired(col)" class="required-star">*</span>
+              <span
+                *ngIf="col.isForeignKey === 1"
+                title="מפתח זר לטבלת {{ col.relatedTable }}"
+                style="margin-right: 5px; cursor: help"
+              >
+                🔑
+              </span>
               {{ col.columnName }}
             </label>
 
             <div class="control-group">
               <div *ngIf="col.isForeignKey === 1" class="fk-container">
-                <span *ngIf="isRequired(col)" class="required-star" style="color: red; margin-left: 4px;">*</span>
-                <select [id]="col.columnName" [name]="col.columnName" [(ngModel)]="localRecord[col.columnName]"
-                  (change)="validateSingleField(col)" class="form-input fk-select"
-                  [class.invalid-field]="errors[col.columnName]">
-                  <option [ngValue]="undefined" disabled selected>בחר ערך...</option>
-                  <option *ngFor="let item of lookups[col.columnName]" [value]="item.Id || item.id">
+                <span
+                  *ngIf="isRequired(col)"
+                  class="required-star"
+                  style="color: red; margin-left: 4px"
+                  >*</span
+                >
+                <select
+                  [id]="col.columnName"
+                  [name]="col.columnName"
+                  [(ngModel)]="localRecord[col.columnName]"
+                  (change)="validateSingleField(col)"
+                  class="form-input fk-select"
+                  [class.invalid-field]="errors[col.columnName]"
+                >
+                  <option [ngValue]="undefined" disabled selected>
+                    בחר ערך...
+                  </option>
+                  <option
+                    *ngFor="let item of lookups[col.columnName]"
+                    [value]="item.Id || item.id"
+                  >
                     <span dir="ltr">
-                      ({{ item.StatusName || item.Name || item.FirstName || 'ללא תיאור' }}) {{ item.Id || item.id }}
+                      ({{
+                        item.StatusName ||
+                          item.Name ||
+                          item.FirstName ||
+                          "ללא תיאור"
+                      }}) {{ item.Id || item.id }}
                     </span>
                   </option>
                 </select>
                 <div class="fk-info">
-                  <span class="fk-text">מפתח זר (FK): נבחר מזהה מתוך טבלת **{{ col.relatedTable }}**</span>
+                  <span class="fk-text"
+                    >מפתח זר (FK): נבחר מזהה מתוך טבלת **{{
+                      col.relatedTable
+                    }}**</span
+                  >
                   <span class="fk-link-icon">🔗</span>
                 </div>
               </div>
 
               <div *ngIf="col.isForeignKey !== 1">
-                <input [type]="getInputType(col.dataType)" [id]="col.columnName" [name]="col.columnName"
-                  [ngModel]="displayTransform(localRecord[col.columnName], col.dataType)"
-                  (ngModelChange)="localRecord[col.columnName] = saveTransform($event, col.dataType); validateSingleField(col)"
-                  [maxlength]="col.maxLength ? col.maxLength + 1 : null" [readonly]="isReadOnly(col.columnName)"
-                  class="form-input" [class.invalid-field]="errors[col.columnName]"
-                  [placeholder]="isRequired(col) ? 'חובה להזין ' + col.columnName : 'נא להזין ' + col.columnName">
+                <input
+                  [type]="getInputType(col.dataType)"
+                  [id]="col.columnName"
+                  [name]="col.columnName"
+                  [ngModel]="
+                    displayTransform(localRecord[col.columnName], col.dataType)
+                  "
+                  (ngModelChange)="
+                    localRecord[col.columnName] = saveTransform(
+                      $event,
+                      col.dataType
+                    );
+                    validateSingleField(col)
+                  "
+                  [maxlength]="col.maxLength ? col.maxLength + 1 : null"
+                  [readonly]="isReadOnly(col.columnName)"
+                  class="form-input"
+                  [class.invalid-field]="errors[col.columnName]"
+                  [placeholder]="
+                    isRequired(col)
+                      ? 'חובה להזין ' + col.columnName
+                      : 'נא להזין ' + col.columnName
+                  "
+                  [class.read-only-field]="isReadOnly(col.columnName)"
+                />
               </div>
 
               <div class="error-message" *ngIf="errors[col.columnName]">
@@ -65,15 +114,23 @@
             <div class="audit-item">
               <span class="audit-label">נוצר ע"י:</span>
               <div class="audit-details">
-                <span class="audit-value">{{ localRecord['CREATE_USER'] || 'Admin' }}</span>
-                <span class="audit-date">{{ localRecord['CREATE_DATE'] | date:'HH:mm dd/MM/yyyy' }}</span>
+                <span class="audit-value">{{
+                  localRecord["CREATE_USER"] || "Admin"
+                }}</span>
+                <span class="audit-date">{{
+                  localRecord["CREATE_DATE"] | date: "HH:mm dd/MM/yyyy"
+                }}</span>
               </div>
             </div>
             <div class="audit-item">
               <span class="audit-label">עודכן לאחרונה ע"י:</span>
               <div class="audit-details">
-                <span class="audit-value">{{ localRecord['UPDATE_USER'] || 'לא עודכן' }}</span>
-                <span class="audit-date">{{ localRecord['UPDATE_DATE'] | date:'HH:mm dd/MM/yyyy' }}</span>
+                <span class="audit-value">{{
+                  localRecord["UPDATE_USER"] || "לא עודכן"
+                }}</span>
+                <span class="audit-date">{{
+                  localRecord["UPDATE_DATE"] | date: "HH:mm dd/MM/yyyy"
+                }}</span>
               </div>
             </div>
           </div>
@@ -83,9 +140,13 @@
 
     <footer class="modal-footer">
       <button class="btn-cancel" (click)="onClose()">ביטול</button>
-      <button class="btn-save" (click)="onSave()" [disabled]="hasValidationErrors">
-        <span>{{ isNewRecord ? '➕' : '💾' }}</span>
-        {{ isNewRecord ? 'הוסף רשומה חדשה' : 'שמור שינויים' }}
+      <button
+        class="btn-save"
+        (click)="onSave()"
+        [disabled]="hasValidationErrors"
+      >
+        <span>{{ isNewRecord ? "➕" : "💾" }}</span>
+        {{ isNewRecord ? "הוסף רשומה חדשה" : "שמור שינויים" }}
       </button>
     </footer>
   </div>

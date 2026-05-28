@@ -1,0 +1,79 @@
+// משתני העיצוב לשימוש בתוך הסיידבר
+$primary-blue: #007bff;
+$sidebar-bg: #f0f7ff;
+$active-blue: #81d4fa;
+$border-color: #cbd5e1;
+$text-main: #1e293b;
+
+.sidebar {
+  width: 280px;
+  min-width: 280px;
+  height: 100%;
+  background-color: $sidebar-bg;
+  border-left: 1px solid $border-color;
+  display: flex;
+  flex-direction: column;
+  padding: 20px 15px;
+  box-sizing: border-box;
+
+  .sidebar-header {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    margin-bottom: 20px;
+    font-weight: bold;
+    color: $text-main;
+  }
+
+  .search-box input {
+    width: 100%;
+    padding: 10px;
+    border: 1px solid $border-color;
+    border-radius: 8px;
+    margin-bottom: 20px;
+    text-align: right;
+    box-sizing: border-box;
+
+    &::placeholder {
+      text-align: center;
+      color: #94a3b8;
+    }
+  }
+
+  .menu-section-title {
+    font-size: 0.8rem;
+    color: $primary-blue;
+    font-weight: bold;
+    margin: 15px 5px 10px;
+    text-transform: uppercase;
+  }
+
+  .menu-item {
+    padding: 12px;
+    margin-bottom: 4px;
+    border-radius: 8px;
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    transition: background 0.2s;
+    color: #475569;
+
+    &:hover {
+      background-color: rgba(0, 0, 0, 0.03);
+    }
+
+    &.active {
+      background-color: $active-blue;
+      color: black;
+      font-weight: 600;
+    }
+
+    &.audit-log {
+      background-color: #e0f2fe;
+      border: 1px solid #bae6fd;
+      margin-bottom: 15px;
+      color: #0369a1; 
+    }
+  }
+}

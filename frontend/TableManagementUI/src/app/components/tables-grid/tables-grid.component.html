@@ -1,0 +1,75 @@
+<div class="table-card shadow" *ngIf="table">
+  
+  <div class="global-search-bar">
+    <input
+      type="text"
+      class="global-input"
+      placeholder="חיפוש מהיר בכל השדות..."
+      [(ngModel)]="globalSearch"
+    />
+  </div>
+
+  <div class="table-responsive">
+    <table class="data-table">
+      <thead>
+        <tr>
+          <th *ngFor="let col of visibleColumns">
+            <div class="th-content">
+              <span>
+                {{ col.columnName }}
+                <span *ngIf="col.isForeignKey" title="מפתח זר לטבלת {{ col.relatedTable }}" style="margin-right: 5px; cursor: help;">
+                  🔑
+                </span>
+              </span>
+              <input
+                type="text"
+                class="column-filter"
+                [placeholder]="'סנן לפי ' + col.columnName + '...'"
+                [(ngModel)]="columnFilters[col.columnName]"
+              />
+            </div>
+          </th>
+          <th class="actions-col" *ngIf="permissions.canEdit || permissions.canDelete">פעולות</th>
+        </tr>
+      </thead>
+      
+      <tbody>
+        <tr *ngFor="let row of getFilteredRows()">
+          <td *ngFor="let col of visibleColumns">
+            
+            <ng-container *ngIf="col.dataType && col.dataType.toLowerCase().includes('date'); else notDate">
+              {{ row[col.columnName] | date: "dd/MM/yyyy" }}
+            </ng-container>
+
+            <ng-template #notDate>
+              <ng-container *ngIf="row[col.columnName + '_Display']; else regularValue">
+                <span class="fk-container">
+                  <span class="fk-display">
+                    ({{ row[col.columnName + "_Display"] }})
+                  </span>
+                  <span class="fk-id">{{ row[col.columnName] }}</span>
+                </span>
+              </ng-container>
+            </ng-template>
+
+            <ng-template #regularValue>
+              {{ row[col.columnName] !== null && row[col.columnName] !== undefined ? row[col.columnName] : "-" }}
+            </ng-template>
+
+          </td>
+
+          <td class="actions-cell" *ngIf="permissions.canEdit || permissions.canDelete">
+            <button class="btn-icon" *ngIf="permissions.canEdit" (click)="onEdit(row)" title="ערוך">✏️</button>
+            <button class="btn-icon" *ngIf="permissions.canDelete" (click)="onDelete(row)" title="מחק">🗑️</button>
+          </td>
+        </tr>
+
+        <tr *ngIf="getFilteredRows().length === 0">
+          <td [attr.colspan]="visibleColumns.length + 1" class="no-data">
+            לא נמצאו רשומות תואמות
+          </td>
+        </tr>
+      </tbody>
+    </table>
+  </div>
+</div>
