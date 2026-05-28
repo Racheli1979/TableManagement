@@ -1,99 +1,69 @@
-GO
 CREATE PROCEDURE ValidateColumnData
     @TableName NVARCHAR(128),
-    @ColumnName NVARCHAR(128),
-    @Value NVARCHAR(MAX)
+    @JsonValues NVARCHAR(MAX)
 AS
 BEGIN
     SET NOCOUNT ON;
 
-    IF LOWER(@ColumnName) = 'reason' AND (ISNULL(@Value, '') = '')
-    BEGIN
-        ;THROW 50002, N'חובה להזין סיבה לביצוע הפעולה.', 1;
-    END
+    IF EXISTS (
+        SELECT 1 FROM OPENJSON(@JsonValues)
+        WHERE value COLLATE DATABASE_DEFAULT LIKE '%DROP%' COLLATE DATABASE_DEFAULT
+           OR value COLLATE DATABASE_DEFAULT LIKE '%DELETE%' COLLATE DATABASE_DEFAULT
+           OR value COLLATE DATABASE_DEFAULT LIKE '%UPDATE%' COLLATE DATABASE_DEFAULT
+           OR value COLLATE DATABASE_DEFAULT LIKE '%SELECT%' COLLATE DATABASE_DEFAULT
+           OR value COLLATE DATABASE_DEFAULT LIKE '%TRUNCATE%' COLLATE DATABASE_DEFAULT
+           OR value LIKE '%--%'
+    ) THROW 50001, 'Security Violation: Forbidden SQL keyword detected.', 1;
 
-    IF UPPER(ISNULL(@Value, '')) LIKE '%DROP%' OR UPPER(ISNULL(@Value, '')) LIKE '%DELETE%' 
-       OR UPPER(ISNULL(@Value, '')) LIKE '%UPDATE%' OR UPPER(ISNULL(@Value, '')) LIKE '%SELECT%' 
-       OR UPPER(ISNULL(@Value, '')) LIKE '%TRUNCATE%' OR @Value LIKE '%--%'
-    BEGIN
-        ;THROW 50001, 'Security Violation: Forbidden SQL keyword detected.', 1;
-    END
+    IF EXISTS (SELECT 1 FROM OPENJSON(@JsonValues) j 
+               JOIN INFORMATION_SCHEMA.COLUMNS c ON c.COLUMN_NAME COLLATE DATABASE_DEFAULT = j.[key] COLLATE DATABASE_DEFAULT 
+               WHERE c.TABLE_NAME COLLATE DATABASE_DEFAULT = @TableName COLLATE DATABASE_DEFAULT 
+               AND c.IS_NULLABLE = 'NO' 
+               AND COLUMNPROPERTY(OBJECT_ID(c.TABLE_SCHEMA + '.' + c.TABLE_NAME), c.COLUMN_NAME, 'IsIdentity') = 0 
+               AND c.COLUMN_DEFAULT IS NULL 
+               AND (j.value IS NULL OR LTRIM(RTRIM(j.value)) = ''))
+        THROW 50003, 'Validation Error: Required field is missing.', 1;
 
-    DECLARE @DataType NVARCHAR(128), 
-            @IsNullable NVARCHAR(10), 
-            @MaxLength INT, 
-            @IsIdentity INT,
-            @HasDefault NVARCHAR(MAX);
+    IF EXISTS (SELECT 1 FROM OPENJSON(@JsonValues) j 
+               JOIN INFORMATION_SCHEMA.COLUMNS c ON c.COLUMN_NAME COLLATE DATABASE_DEFAULT = j.[key] COLLATE DATABASE_DEFAULT 
+               WHERE c.TABLE_NAME COLLATE DATABASE_DEFAULT = @TableName COLLATE DATABASE_DEFAULT 
+               AND c.CHARACTER_MAXIMUM_LENGTH > 0 
+               AND LEN(ISNULL(j.value, '')) > c.CHARACTER_MAXIMUM_LENGTH)
+        THROW 50004, 'Validation Error: Value exceeds max length.', 1;
 
-    SELECT 
-        @DataType = c.DATA_TYPE, 
-        @IsNullable = c.IS_NULLABLE, 
-        @MaxLength = c.CHARACTER_MAXIMUM_LENGTH,
-        @IsIdentity = COLUMNPROPERTY(OBJECT_ID(@TableName), @ColumnName, 'IsIdentity'),
-        @HasDefault = c.COLUMN_DEFAULT 
-    FROM INFORMATION_SCHEMA.COLUMNS c
-    WHERE c.TABLE_NAME = @TableName AND c.COLUMN_NAME = @ColumnName;
+    IF EXISTS (SELECT 1 FROM OPENJSON(@JsonValues) j 
+               JOIN INFORMATION_SCHEMA.COLUMNS c ON c.COLUMN_NAME COLLATE DATABASE_DEFAULT = j.[key] COLLATE DATABASE_DEFAULT 
+               WHERE c.TABLE_NAME COLLATE DATABASE_DEFAULT = @TableName COLLATE DATABASE_DEFAULT 
+               AND c.DATA_TYPE IN ('int', 'decimal', 'numeric', 'float', 'real', 'bigint', 'smallint') 
+               AND LTRIM(RTRIM(j.value)) <> '' 
+               AND ISNUMERIC(j.value) = 0)
+        THROW 50005, 'Validation Error: Must be a valid number.', 1;
 
-    IF @IsNullable = 'NO' 
-       AND ISNULL(@IsIdentity, 0) = 0 
-       AND @HasDefault IS NULL 
-       AND (NULLIF(LTRIM(RTRIM(ISNULL(@Value, ''))), '') IS NULL)
-    BEGIN
-        DECLARE @ReqMsg NVARCHAR(200) = N'Validation Error: The field [' + @ColumnName + N'] is required.';
-        ;THROW 50003, @ReqMsg, 1;
-    END
+    IF EXISTS (SELECT 1 FROM OPENJSON(@JsonValues) j 
+               WHERE (j.[key] LIKE '%Name%' OR j.[key] LIKE N'%שם%') 
+               AND LTRIM(RTRIM(j.value)) <> '' 
+               AND (j.value LIKE '%[{}]%' OR j.value LIKE '%[<>]%' OR j.value LIKE '%[#$^*]%'))
+        THROW 50006, 'Validation Error: Invalid characters detected in name field.', 1;
 
-    IF @MaxLength > 0 AND LEN(ISNULL(@Value, '')) > @MaxLength
-    BEGIN
-        DECLARE @LenMsg NVARCHAR(200) = N'Validation Error: Value in [' + @ColumnName + N'] exceeds max length of ' + CAST(@MaxLength AS NVARCHAR(10));
-        ;THROW 50004, @LenMsg, 1;
-    END
+    IF EXISTS (SELECT 1 FROM OPENJSON(@JsonValues) j 
+               JOIN INFORMATION_SCHEMA.COLUMNS c ON c.COLUMN_NAME COLLATE DATABASE_DEFAULT = j.[key] COLLATE DATABASE_DEFAULT 
+               WHERE c.TABLE_NAME COLLATE DATABASE_DEFAULT = @TableName COLLATE DATABASE_DEFAULT 
+               AND c.DATA_TYPE IN ('datetime', 'date', 'datetime2', 'smalldatetime') 
+               AND LTRIM(RTRIM(j.value)) <> '' AND ISDATE(j.value) = 0)
+        THROW 50007, 'Validation Error: Must be a valid date.', 1;
 
-    IF @DataType IN ('int', 'decimal', 'numeric', 'float', 'real', 'bigint', 'smallint') 
-       AND LTRIM(RTRIM(ISNULL(@Value, ''))) <> ''
-    BEGIN
-        IF ISNUMERIC(@Value) = 0
-        BEGIN
-            DECLARE @NumMsg NVARCHAR(200) = N'Validation Error: Value in [' + @ColumnName + N'] must be a valid number.';
-            ;THROW 50005, @NumMsg, 1;
-        END
-    END
+    IF EXISTS (SELECT 1 FROM OPENJSON(@JsonValues) j 
+               JOIN INFORMATION_SCHEMA.COLUMNS c ON c.COLUMN_NAME COLLATE DATABASE_DEFAULT = j.[key] COLLATE DATABASE_DEFAULT 
+               WHERE c.TABLE_NAME COLLATE DATABASE_DEFAULT = @TableName COLLATE DATABASE_DEFAULT 
+               AND c.DATA_TYPE IN ('datetime', 'date', 'datetime2', 'smalldatetime') 
+               AND TRY_CAST(j.value AS DATETIME) > GETDATE())
+        THROW 50009, 'Validation Error: Date cannot be in the future.', 1;
 
-    IF (@ColumnName LIKE '%Name%' OR @ColumnName LIKE N'%שם%') 
-       AND LTRIM(RTRIM(ISNULL(@Value, ''))) <> ''
-    BEGIN
-        IF @Value LIKE '%[{}]%' OR @Value LIKE '%[<>]%' OR @Value LIKE '%[#$^*]%'
-        BEGIN
-            DECLARE @NameMsg NVARCHAR(200) = N'Validation Error: Invalid characters detected in name field [' + @ColumnName + N'].';
-            ;THROW 50006, @NameMsg, 1;
-        END
-    END
-
-    IF @DataType IN ('datetime', 'date', 'datetime2', 'smalldatetime') 
-       AND LTRIM(RTRIM(ISNULL(@Value, ''))) <> ''
-    BEGIN
-        IF ISDATE(@Value) = 0
-        BEGIN
-            DECLARE @DateMsg NVARCHAR(200) = N'Validation Error: Value in [' + @ColumnName + N'] must be a valid date.';
-            ;THROW 50007, @DateMsg, 1;
-        END
-        
-        DECLARE @InputDate DATETIME = TRY_CAST(@Value AS DATETIME);
-
-        IF @InputDate IS NOT NULL
-        BEGIN
-            IF @InputDate > GETDATE()
-            BEGIN
-                DECLARE @FutureMsg NVARCHAR(200) = N'Validation Error: Date in [' + @ColumnName + N'] cannot be in the future.';
-                ;THROW 50009, @FutureMsg, 1;
-            END
-
-            IF @InputDate < DATEADD(YEAR, -1, GETDATE())
-            BEGIN
-                DECLARE @OldMsg NVARCHAR(200) = N'Validation Error: Date in [' + @ColumnName + N'] is too old (more than 1 year ago).';
-                ;THROW 50010, @OldMsg, 1;
-            END
-        END
-    END
+    IF EXISTS (SELECT 1 FROM OPENJSON(@JsonValues) j 
+               JOIN INFORMATION_SCHEMA.COLUMNS c ON c.COLUMN_NAME COLLATE DATABASE_DEFAULT = j.[key] COLLATE DATABASE_DEFAULT 
+               WHERE c.TABLE_NAME COLLATE DATABASE_DEFAULT = @TableName COLLATE DATABASE_DEFAULT 
+               AND c.DATA_TYPE IN ('datetime', 'date', 'datetime2', 'smalldatetime') 
+               AND TRY_CAST(j.value AS DATETIME) < DATEADD(YEAR, -1, GETDATE()))
+        THROW 50010, 'Validation Error: Date is too old.', 1;
 END
 GO

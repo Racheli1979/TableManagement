@@ -1,4 +1,3 @@
-GO
 CREATE PROCEDURE AddNewRecord
     @TableName NVARCHAR(128),
     @JsonValues NVARCHAR(MAX), 
@@ -7,87 +6,38 @@ CREATE PROCEDURE AddNewRecord
 AS
 BEGIN
     SET NOCOUNT ON;
+    SET XACT_ABORT ON;
 
-    EXEC ValidateColumnData @TableName = 'AuditLog', @ColumnName = 'Reason', @Value = @Reason;
+    EXEC ValidateColumnData @TableName = @TableName, @JsonValues = @JsonValues;
+    EXEC ValidateColumnData @TableName = 'AuditLog', @JsonValues = '{"Reason": "Validated"}';
 
-    DECLARE @ColName NVARCHAR(128);
-    DECLARE @ColValue NVARCHAR(MAX); 
+    DECLARE @Cols NVARCHAR(MAX), @SQL NVARCHAR(MAX);
 
-    DECLARE col_iterator CURSOR FOR 
-    SELECT c.COLUMN_NAME, CAST(j.[value] AS NVARCHAR(MAX)) 
-    FROM INFORMATION_SCHEMA.COLUMNS c
-    LEFT JOIN OPENJSON(@JsonValues) j 
-        ON j.[key] COLLATE DATABASE_DEFAULT = c.COLUMN_NAME COLLATE DATABASE_DEFAULT
-    WHERE c.TABLE_NAME = @TableName;
-
-    OPEN col_iterator;
-    FETCH NEXT FROM col_iterator INTO @ColName, @ColValue;
-
-    WHILE @@FETCH_STATUS = 0
-    BEGIN
-        BEGIN TRY
-            EXEC ValidateColumnData 
-                @TableName = @TableName, 
-                @ColumnName = @ColName, 
-                @Value = @ColValue;
-        END TRY
-        BEGIN CATCH
-            CLOSE col_iterator;
-            DEALLOCATE col_iterator;
-            ;THROW; 
-            RETURN; 
-        END CATCH
-
-        FETCH NEXT FROM col_iterator INTO @ColName, @ColValue;
-    END
-
-    CLOSE col_iterator;
-    DEALLOCATE col_iterator;
-
-    DECLARE @Cols NVARCHAR(MAX), @Vals NVARCHAR(MAX), @SQL NVARCHAR(MAX);
-
-    SELECT 
-        @Cols = STRING_AGG(QUOTENAME([key]), ', '),
-        @Vals = STRING_AGG('N''' + REPLACE(CAST([value] AS NVARCHAR(MAX)), '''', '''''') + '''', ', ')
-    FROM OPENJSON(@JsonValues)
-    WHERE [key] NOT IN ('REASON', 'reason');
+    SELECT @Cols = STRING_AGG(QUOTENAME(name), ', ')
+    FROM sys.columns 
+    WHERE object_id = OBJECT_ID(@TableName)
+      AND name NOT IN ('CREATE_USER', 'CREATE_DATE', 'UPDATE_USER', 'UPDATE_DATE');
 
     SET @SQL = N'INSERT INTO ' + QUOTENAME(@TableName) + 
-               N' (' + @Cols + N', CREATE_USER, CREATE_DATE, UPDATE_USER, UPDATE_DATE) 
-               VALUES (' + @Vals + N', @User, GETDATE(), @User, GETDATE());';
+               N' (' + @Cols + N', CREATE_USER, CREATE_DATE, UPDATE_USER, UPDATE_DATE) ' +
+               N' SELECT ' + @Cols + N', @User, GETDATE(), @User, GETDATE() ' +
+               N' FROM OPENJSON(@Json) WITH (' + 
+               (SELECT STRING_AGG(QUOTENAME(name) + N' NVARCHAR(MAX) ''$.' + name + N'''', N', ') 
+                FROM sys.columns WHERE object_id = OBJECT_ID(@TableName)) + N')';
 
     BEGIN TRY
-        EXEC sp_executesql @SQL, N'@User NVARCHAR(128)', @User = @UpdateUser;
+        BEGIN TRANSACTION;
 
-        INSERT INTO AuditLog (
-            TableName, 
-            RecordId, 
-            Action, 
-            UserName, 
-            ChangeDate, 
-            Reason, 
-            OldValues, 
-            NewValues
-        )
-        VALUES (
-            @TableName, 
-            NULL,       
-            'INSERT', 
-            @UpdateUser, 
-            GETDATE(), 
-            @Reason, 
-            NULL,       
-            @JsonValues 
-        );
+        EXEC sp_executesql @SQL, N'@Json NVARCHAR(MAX), @User NVARCHAR(128)', @Json = @JsonValues, @User = @UpdateUser;
 
+        INSERT INTO AuditLog (TableName, RecordId, Action, UserName, ChangeDate, Reason, NewValues)
+        VALUES (@TableName, SCOPE_IDENTITY(), 'INSERT', @UpdateUser, GETDATE(), @Reason, @JsonValues);
+
+        COMMIT TRANSACTION;
     END TRY
     BEGIN CATCH
-        IF CURSOR_STATUS('global', 'col_iterator') >= -1
-        BEGIN
-            IF CURSOR_STATUS('global', 'col_iterator') >= 0 CLOSE col_iterator;
-            DEALLOCATE col_iterator;
-        END
-        ;THROW; 
+        IF @@TRANCOUNT > 0 ROLLBACK TRANSACTION;
+        ;THROW;
     END CATCH
 END
 GO
