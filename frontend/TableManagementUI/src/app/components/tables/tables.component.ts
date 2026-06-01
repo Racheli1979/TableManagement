@@ -149,7 +149,7 @@ export class TablesComponent implements OnInit, OnDestroy {
       this.tablesService.addRecord({
         tableName: this.selectedTableForColumnSearch!.tableName,
         recordData: d,
-        updateUser: this.permissionsService.currentUser, 
+        updateUser: this.permissionsService.currentUser,
         reason,
       }),
     );
@@ -166,7 +166,7 @@ export class TablesComponent implements OnInit, OnDestroy {
       this.tablesService.updateRecord({
         TableName: this.selectedTableForColumnSearch!.tableName,
         IdValue: idValue,
-        UpdateUser: this.permissionsService.currentUser, 
+        UpdateUser: this.permissionsService.currentUser,
         Reason: reason,
         UpdatedData: updatedFields,
       }),
@@ -174,11 +174,14 @@ export class TablesComponent implements OnInit, OnDestroy {
   }
 
   private async executeDelete(data: any, reason: string) {
+    const rawId = data.Id || data.id || data.ID;
+    const idValue = String(rawId);
+
     await firstValueFrom(
       this.tablesService.deleteRecord({
         tableName: this.selectedTableForColumnSearch!.tableName,
-        id: data.Id || data.id || data.ID,
-        updateUser: this.permissionsService.currentUser, 
+        id: idValue, 
+        updateUser: this.permissionsService.currentUser,
         reason,
       }),
     );

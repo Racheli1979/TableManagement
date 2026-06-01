@@ -5,6 +5,7 @@ import { Observable } from 'rxjs';
 export interface Column {
   columnName: string;
   dataType: string;
+  isIdentity: number;
   isNullable: string;
   maxLength: number | null;
   isForeignKey: number;

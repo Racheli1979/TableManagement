@@ -9,21 +9,23 @@ BEGIN
     SET XACT_ABORT ON;
 
     EXEC ValidateColumnData @TableName = @TableName, @JsonValues = @JsonValues;
-    EXEC ValidateColumnData @TableName = 'AuditLog', @JsonValues = '{"Reason": "Validated"}';
 
     DECLARE @Cols NVARCHAR(MAX), @SQL NVARCHAR(MAX);
+    DECLARE @ObjectId INT = OBJECT_ID(@TableName);
 
     SELECT @Cols = STRING_AGG(QUOTENAME(name), ', ')
     FROM sys.columns 
-    WHERE object_id = OBJECT_ID(@TableName)
-      AND name NOT IN ('CREATE_USER', 'CREATE_DATE', 'UPDATE_USER', 'UPDATE_DATE');
+    WHERE object_id = @ObjectId
+      AND name NOT IN ('CREATE_USER', 'CREATE_DATE', 'UPDATE_USER', 'UPDATE_DATE')
+      AND COLUMNPROPERTY(object_id, name, 'IsIdentity') = 0; 
 
+    -- בניית ה-SQL
     SET @SQL = N'INSERT INTO ' + QUOTENAME(@TableName) + 
                N' (' + @Cols + N', CREATE_USER, CREATE_DATE, UPDATE_USER, UPDATE_DATE) ' +
                N' SELECT ' + @Cols + N', @User, GETDATE(), @User, GETDATE() ' +
                N' FROM OPENJSON(@Json) WITH (' + 
                (SELECT STRING_AGG(QUOTENAME(name) + N' NVARCHAR(MAX) ''$.' + name + N'''', N', ') 
-                FROM sys.columns WHERE object_id = OBJECT_ID(@TableName)) + N')';
+                FROM sys.columns WHERE object_id = @ObjectId) + N')';
 
     BEGIN TRY
         BEGIN TRANSACTION;
