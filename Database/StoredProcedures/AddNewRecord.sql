@@ -19,7 +19,6 @@ BEGIN
       AND name NOT IN ('CREATE_USER', 'CREATE_DATE', 'UPDATE_USER', 'UPDATE_DATE')
       AND COLUMNPROPERTY(object_id, name, 'IsIdentity') = 0; 
 
-    -- בניית ה-SQL
     SET @SQL = N'INSERT INTO ' + QUOTENAME(@TableName) + 
                N' (' + @Cols + N', CREATE_USER, CREATE_DATE, UPDATE_USER, UPDATE_DATE) ' +
                N' SELECT ' + @Cols + N', @User, GETDATE(), @User, GETDATE() ' +
