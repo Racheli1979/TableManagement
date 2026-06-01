@@ -5,8 +5,14 @@ A robust, dynamic database management interface designed for secure record manip
 ## 📋 Project Overview
 This system provides a secure interface for authorized users to view, add, update, and delete records across various database tables. It replaces legacy, insecure administrative access with a controlled, audited, and modern architecture, ensuring data integrity and regulatory compliance.
 
+## 📂 Project Structure
+```text
+/TABLEMANAGEMENT
+  /backend             # .NET 8 API (Layered: API, BI, DAL, Contracts)
+  /database            # SQL Server Stored Procedures
+  /frontend            # Angular 19 Application
+```
 ## 🚀 Key Features
-* **Dynamic Schema Discovery:** Automatically retrieves table metadata, columns, and foreign key relationships directly from the database.
 * **Modern UI (Angular 19):** Built with Angular 19, featuring real-time column filtering, global search, and intuitive modal-based forms.
 * **Strict Security Architecture:**
     * **No Dynamic SQL:** All operations are executed via pre-defined Stored Procedures.
@@ -19,23 +25,6 @@ This system provides a secure interface for authorized users to view, add, updat
 * **Backend:** .NET 8 (API Layer, Business Logic, Dapper for Data Access).
 * **Database:** SQL Server (Designed with Oracle-compatible abstraction for future migration).
 
-## 🛡 Security Protocols
-The system is built on the "Zero Trust" principle regarding client-side data:
-1.  **Validation Layers:** Multi-stage validation occurs both in the Angular UI and the .NET Business Logic.
-2.  **Stored Procedures:** Direct table access is restricted. The database layer only accepts calls to specific, vetted procedures.
-3.  **Role-Based Access:** UI elements are dynamically rendered based on the `PermissionsService`, ensuring users only interact with functions they are authorized to use.
-4.  **Audit Logging:** Every write operation is timestamped and attributed to the specific user, including the justification provided.
-
-## 📂 Project Structure
-```text
-/src
-  /app
-    /components      # UI Components (Table Grid, Modals, Sidebar)
-    /services        # API communication & Logic (TablesService, Permissions)
-/TableManagementDal  # Data Access Layer (Dapper repositories)
-/TableManagementApi  # API Controllers & Business Logic Layer
-```
-
 ## ⚙️ Development Guide
 
 ### Prerequisites
@@ -43,20 +32,41 @@ The system is built on the "Zero Trust" principle regarding client-side data:
 * **Angular CLI** (v19)
 * **Node.js**
 
-### Commands
+## ⚡ Setup Guide
 
-**Install Dependencies:**
-```bash
-npm install
-```
+### 1. Database Setup
+Before starting, you must initialize the database:
+1. Open SQL Server Management Studio (SSMS).
+2. Run the script located at `/database/CreateDB.sql` to set up the tables and data.
+3. Run all additional scripts located in the `/database` folder to set up the stored procedures.
 
-### Code Formatting
-To maintain consistent code style and import ordering, run:
+### 2. Backend Setup
+1. Open `backend/TableManagementApi` and create a new file called `.env`.
+2. Copy `.env.sample` to `.env`.
+3. Open `.env` and update the connection details.
+4. Navigate to the `backend/TableManagementApi` directory and run the API:
+   ```bash
+   dotnet run
+   ```
 
-```bash
-npm run front-format
-```
+### 3. Frontend Setup
+1. Navigate to the `frontend/TableManagementUI/src/app` directory.
+2. Install dependencies:
+   ```bash
+   npm install
+   ```
+3. To maintain consistent code style and import ordering, run:
+   ```bash
+    npm run front-format
+   ```
+4. Run the application:
+   ```bash
+    ng serve
+   ```
 
-## 📝 Compliance & Maintenance
-* **Legacy Support:** A specific user (`acn_hasava_load`) is maintained for large-scale data migrations; its permissions are strictly monitored.
-* **Migration Strategy:** All data-centric logic resides in Stored Procedures, ensuring a seamless transition path from SQL Server to Oracle in the future.
+## 🛡 Security Protocols
+The system is built on the "Zero Trust" principle regarding client-side data:
+1.  **Validation Layers:** Multi-stage validation occurs both in the Angular UI and the .NET Business Logic.
+2.  **Stored Procedures:** Direct table access is restricted. The database layer only accepts calls to specific, vetted procedures.
+3.  **Role-Based Access:** UI elements are dynamically rendered based on the `PermissionsService`, ensuring users only interact with functions they are authorized to use.
+4.  **Audit Logging:** Every write operation is timestamped and attributed to the specific user, including the justification provided.
