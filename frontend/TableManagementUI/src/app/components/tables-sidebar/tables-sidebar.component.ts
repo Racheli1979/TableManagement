@@ -65,16 +65,17 @@ export class TablesSidebarComponent implements OnInit, OnDestroy {
     this.tablesService.getTables().subscribe({
       next: (data: any[]) => {
         const mappedTables = data.map((t) => ({
-          tableName: t.tableName || t.TableName,
-          schemaName: t.schemaName || t.SchemaName,
-          objectType: t.objectType || t.ObjectType,
-          columns: (t.columns || t.Columns || []).map((c: any) => ({
-            columnName: c.columnName || c.ColumnName,
-            dataType: c.dataType || c.DataType,
-            isNullable: c.isNullable || c.IsNullable,
-            maxLength: c.maxLength || c.MaxLength,
-            isForeignKey: c.isForeignKey || c.IsForeignKey,
-            relatedTable: c.relatedTable || c.RelatedTable,
+          tableName: t.TableName,
+          schemaName: t.SchemaName,
+          objectType: t.ObjectType,
+          columns: (t.Columns || []).map((c: any) => ({
+            columnName: c.ColumnName,
+            dataType: c.DataType,
+            isNullable: c.IsNullable,
+            isIdentity: c.IsIdentity,
+            maxLength: c.MaxLength,
+            isForeignKey: c.IsForeignKey,
+            relatedTable: c.RelatedTable,
           })),
         }));
 

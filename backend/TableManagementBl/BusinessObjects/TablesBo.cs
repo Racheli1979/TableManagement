@@ -60,7 +60,7 @@ namespace TableManagementBl.BusinessObjects
                     .GroupBy(r => new { 
                         TableName = r.TableName ?? "Unknown", 
                         SchemaName = r.SchemaName ?? "Unknown", 
-                        ObjectType = r.ObjectType ?? "Unknown" 
+                        ObjectType = r.ObjectType ?? "Unknown",
                     })
                     .Select(g => new TableMetadataDto
                     {
@@ -72,6 +72,7 @@ namespace TableManagementBl.BusinessObjects
                             { "ColumnName", c.ColumnName ?? "Unknown" },
                             { "DataType", c.DataType ?? "Unknown" },
                             { "IsNullable", c.IsNullable },
+                            { "IsIdentity", c.IsIdentity },
                             { "MaxLength", c.MaxLength },
                             { "IsForeignKey", c.IsForeignKey },
                             { "RelatedTable", c.RelatedTable ?? "" }

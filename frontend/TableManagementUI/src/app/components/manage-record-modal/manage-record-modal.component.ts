@@ -161,14 +161,15 @@ export class ManageRecordModalComponent implements OnInit {
 
   getEditableColumns() {
     if (!this.table?.columns) return [];
-    const fieldsToHide = [
-      'CREATE_DATE',
-      'CREATE_USER',
-      'UPDATE_DATE',
-      'UPDATE_USER',
-    ];
-    return this.table.columns.filter(
-      (col) => !fieldsToHide.includes(col.columnName),
+    return this.table.columns.filter((col) => {
+      if(this.auditFields.includes(col.columnName)){
+        return false;
+      }
+      if ((col.columnName === 'Id' && col.isIdentity === 1) || (col.columnName === 'Id' && this.isNewRecord === false)) {
+      return false;
+      }
+      return true;
+    } 
     );
   }
 
