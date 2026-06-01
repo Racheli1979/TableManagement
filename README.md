@@ -26,20 +26,20 @@ This system provides a secure interface for authorized users to view, add, updat
 * **Database:** SQL Server (Designed with Oracle-compatible abstraction for future migration).
 
 ## ⚙️ Development Guide
-### Prerequisites
+#### Prerequisites
 * **.NET 8 SDK**
 * **Angular CLI** (v19)
 * **Node.js**
 
 ## ⚡Setup Guide
-### 1. Database Setup
+#### 1. Database Setup
 Before starting, you must initialize the database:
 1. Open SQL Server Management Studio (SSMS).
 2. Run the script located at /database/createDB.sql to set up the tables and data.
 3. Run all additional scripts located in the /database folder to set up the stored procedures.
 
 
-### 2. Backend Setup
+#### 2. Backend Setup
 1. Open backend/TableManagementApi and open a new file called .env .
 2. Copy .env.sample to .env.
 3. Open .env and update the connection details.
@@ -48,7 +48,7 @@ Before starting, you must initialize the database:
 dotnet run
 ```
 
-### 2. Backend Setup
+#### 2. Frondend Setup
 1. Navigator to frontend/TableManagementUI/src/app , run:
 
 **Install Dependencies:**
